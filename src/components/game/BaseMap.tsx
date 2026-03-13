@@ -189,8 +189,8 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
   return (
     <div>
       {/* ── SVG MAP ───────────────────────────────────────────────── */}
-      <div className="relative w-full bg-[#e8f0e8] overflow-x-auto select-none">
-  
+      <div className="relative w-full overflow-x-auto select-none" style={{ background: "#D7DEE1" }}>
+
         <svg
           ref={svgRef}
           viewBox="0 0 900 500"
@@ -201,35 +201,58 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
           onPointerUp={handleSVGPointerUp}
           onPointerLeave={cancelDrag}
         >
-          {/* Grass background */}
-          <rect width="900" height="500" fill="#dceadc" />
+          {/* ── Silver terrain background */}
+          <rect width="900" height="500" fill="#D7DEE1" />
+
+          {/* Subtle tactical grid */}
+          <defs>
+            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#0C234C" strokeWidth="0.3" opacity="0.15" />
+            </pattern>
+          </defs>
+          <rect width="900" height="500" fill="url(#grid)" />
 
           {/* Drag-drop instructions banner */}
-          <rect x="20" y="8" width="860" height="24" rx="3" fill="#e0f2fe" stroke="#0284c7" strokeWidth="1.5" opacity="0.85" />
-          <text x="30" y="24" fontSize="9" fill="#0c4a6e" fontFamily="monospace" fontWeight="bold">
+          <rect x="20" y="8" width="860" height="22" rx="3" fill="#0C234C" opacity="0.92" />
+          <text x="30" y="22" fontSize="9" fill="#D7AB3A" fontFamily="monospace" fontWeight="bold">
             💡 Dra flygplan → Bana (✈️ uppdrag) · Hangar (🔧 underhåll) · Reservdel (📦 LRU 2h) · Bränsle (⛽) · Ammo (💣)
           </text>
 
-          {/* ── Perimeter fence (disabled) ── */}
-          <rect x="20" y="20" width="860" height="460" fill="none" stroke="none" strokeWidth="0" />
+          {/* ── Perimeter fence */}
+          <rect x="20" y="36" width="860" height="446" fill="none" stroke="#0C234C" strokeWidth="1" strokeDasharray="8 4" opacity="0.18" rx="2" />
 
-          {/* ── Taxiway (south of runway) ── */}
-          <rect x="60" y="238" width="780" height="14" fill="#b0b8c8" />
+          {/* ── Taxiway (thin connector strip, no roads) ── */}
+          <rect x="60" y="238" width="780" height="10" rx="2" fill="#b0b8c8" opacity="0.7" />
+          {/* Taxiway centre-line dashes */}
+          <line x1="60" y1="243" x2="840" y2="243" stroke="#D7AB3A" strokeWidth="0.8" strokeDasharray="12 10" opacity="0.45" />
 
-          {/* ── Runway drop zone ── */}
-          <rect x="60" y="150" width="780" height="60" rx="2" fill="#9aa4b8" />
-          {/* Runway centre-line */}
-          <line x1="60" y1="180" x2="840" y2="180" stroke="#f8fafc" strokeWidth="1.5" strokeDasharray="20 14" />
-          {/* Runway threshold marks */}
+          {/* ── Runway ── */}
+          {/* Asphalt base */}
+          <rect x="60" y="148" width="780" height="62" rx="3" fill="#5a6070" />
+          {/* Runway edge stripes */}
+          <rect x="60" y="148" width="780" height="4" rx="2" fill="#D7AB3A" opacity="0.6" />
+          <rect x="60" y="206" width="780" height="4" rx="2" fill="#D7AB3A" opacity="0.6" />
+          {/* Centre-line */}
+          <line x1="60" y1="179" x2="840" y2="179" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="22 12" opacity="0.9" />
+          {/* Threshold marks - left */}
           {[0, 1, 2, 3, 4, 5].map((i) => (
-            <rect key={i} x={75 + i * 14} y={154} width={8} height={18} fill="#c8d0dc" />
+            <rect key={`tl-${i}`} x={72 + i * 14} y={152} width={7} height={16} rx="1" fill="#ffffff" opacity="0.55" />
           ))}
+          {/* Threshold marks - right */}
           {[0, 1, 2, 3, 4, 5].map((i) => (
-            <rect key={i} x={807 - i * 14} y={188} width={8} height={18} fill="#c8d0dc" />
+            <rect key={`tr-${i}`} x={810 - i * 14} y={192} width={7} height={16} rx="1" fill="#ffffff" opacity="0.55" />
           ))}
-          <text x="450" y="183" textAnchor="middle" fontSize="9" fill="#fff" fontFamily="monospace" letterSpacing="3">
+          {/* Runway designation text */}
+          <text x="100" y="178" textAnchor="middle" fontSize="10" fill="#D7AB3A" fontFamily="monospace" fontWeight="bold" opacity="0.9">09</text>
+          <text x="800" y="200" textAnchor="middle" fontSize="10" fill="#D7AB3A" fontFamily="monospace" fontWeight="bold" opacity="0.9">27</text>
+          <text x="450" y="183" textAnchor="middle" fontSize="9" fill="#ffffff" fontFamily="monospace" letterSpacing="4" opacity="0.85">
             LANDNINGSBANA 09/27
           </text>
+          {/* PAPI lights at both ends */}
+          {[0, 1, 2, 3].map((i) => (
+            <rect key={`papi-${i}`} x={62 + i * 6} y={210} width={4} height={5} rx="1"
+              fill={i < 2 ? "#D9192E" : "#ffffff"} opacity="0.9" />
+          ))}
 
           {/* ── On-mission aircraft rendered ON the runway ── */}
           {onMission.slice(0, 10).map((ac, i) => {
