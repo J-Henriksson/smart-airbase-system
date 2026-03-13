@@ -95,6 +95,9 @@
   .glow-amber {
     box-shadow: var(--glow-amber);
   }
+  .glow-red {
+    box-shadow: var(--glow-red);
+  }
   .text-status-green {
     color: hsl(var(--status-green));
   }
@@ -133,8 +136,8 @@
       0deg,
       transparent,
       transparent 2px,
-      hsl(209 100% 31% / 0.03) 2px,
-      hsl(209 100% 31% / 0.03) 4px
+      hsl(220 63% 18% / 0.04) 2px,
+      hsl(220 63% 18% / 0.04) 4px
     );
   }
 }
