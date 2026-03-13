@@ -51,7 +51,7 @@ export function MaintenanceBays({ base, onDropAircraft }: MaintenanceBaysProps) 
     
     const aircraftId = e.dataTransfer.getData("aircraftId");
     if (aircraftId && onDropAircraft) {
-      onDropAircraft(aircraftId);
+      onDropAircraft(aircraftId, "hangar");
     }
   };
 
