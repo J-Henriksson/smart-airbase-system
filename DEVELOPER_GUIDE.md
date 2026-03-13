@@ -60,23 +60,37 @@ pnpm exec tsc --noEmit  # Type check
 
 ### Data Flow
 
+```mermaid
+flowchart TD
+    A[User Action<br/>click / drag-drop / form] --> B["Component calls<br/>useGame().method()"]
+    B --> C["gameReducer(state, action)"]
+    C --> D{validateAction}
+    D -->|valid| E[Phase Handler /<br/>Action Handler]
+    D -->|invalid| F[Warning Event<br/>state unchanged]
+    E --> G[New GameState + Events]
+    G --> H[React Context<br/>propagates state]
+    H --> I[All subscribed<br/>components re-render]
+    I --> J[UI updates<br/>Framer Motion / Sonner toasts]
+
+    style C fill:#0C234C,color:#D7AB3A
+    style D fill:#1a3a5c,color:#fff
+    style G fill:#2D9A5D,color:#fff
+    style F fill:#D9192E,color:#fff
 ```
-User Action (click, drag-drop, form submit)
-    |
-    v
-Component calls engine method via useGame()
-    |
-    v
-gameReducer(state: GameState, action: GameAction) => GameState
-    |
-    v
-Validation -> Phase Handler -> State Mutation + Events
-    |
-    v
-React Context propagates new state
-    |
-    v
-All subscribed components re-render
+
+### Provider Hierarchy
+
+```mermaid
+graph TD
+    QCP["QueryClientProvider"] --> TP["TooltipProvider"]
+    TP --> Toast["Toaster + Sonner"]
+    Toast --> GP["GameProvider<br/>(shared state)"]
+    GP --> BR["BrowserRouter"]
+    BR --> R1["/ → Index"]
+    BR --> R2["/ato → ATO"]
+    BR --> R3["/map → Map"]
+
+    style GP fill:#0C234C,color:#D7AB3A
 ```
 
 ### Key Architectural Decisions
@@ -104,11 +118,40 @@ type MaintenanceType = "quick_lru" | "complex_lru" | "direct_repair" | "troubles
 
 ### Aircraft Status (9-State Model)
 
-```
-ready ──> allocated ──> in_preparation ──> awaiting_launch ──> on_mission
-                                                                   |
-                                                                   v
-unavailable <── under_maintenance <── recovering <── returning <───┘
+```mermaid
+stateDiagram-v2
+    direction LR
+
+    ready --> allocated : ASSIGN_AIRCRAFT
+    allocated --> in_preparation : OrderPreparation
+    in_preparation --> awaiting_launch : Prep complete
+    awaiting_launch --> on_mission : DISPATCH_ORDER
+    on_mission --> returning : Mission complete
+    returning --> recovering : Landed
+    recovering --> ready : Recovery done
+
+    ready --> unavailable : Random failure
+    in_preparation --> unavailable : BIT failure
+    unavailable --> under_maintenance : START_MAINTENANCE
+    under_maintenance --> ready : Repair complete
+
+    state "Mission Capable" as mc {
+        ready
+        allocated
+        in_preparation
+        awaiting_launch
+    }
+
+    state "On Operations" as ops {
+        on_mission
+        returning
+    }
+
+    state "Maintenance" as maint {
+        recovering
+        under_maintenance
+        unavailable
+    }
 ```
 
 | Status | Meaning | MC? |
@@ -235,6 +278,26 @@ The engine lives in `src/core/` and is purely functional — no React, no side e
 function gameReducer(state: GameState, action: GameAction): GameState
 ```
 
+```mermaid
+flowchart TD
+    A["gameReducer(state, action)"] --> B{RESET_GAME?}
+    B -->|Yes| C[Return initialGameState]
+    B -->|No| D["validateAction(state, action)"]
+    D -->|Invalid| E["addEvent(warning)<br/>Return unchanged state"]
+    D -->|Valid| F{action.type}
+    F --> G[ADVANCE_PHASE<br/>→ handleAdvancePhase]
+    F --> H[ASSIGN_AIRCRAFT<br/>→ handleAssignAircraft]
+    F --> I[DISPATCH_ORDER<br/>→ handleDispatchOrder]
+    F --> J[START_MAINTENANCE<br/>→ handleStartMaintenance]
+    F --> K[SEND_MISSION_DROP<br/>→ handleSendMissionDrop]
+    F --> L[CREATE/EDIT/DELETE<br/>ATO_ORDER]
+    F --> M[APPLY/DISMISS<br/>RECOMMENDATION]
+    F --> N[APPLY_UTFALL<br/>→ handleApplyUtfall]
+
+    style A fill:#0C234C,color:#D7AB3A
+    style E fill:#D9192E,color:#fff
+```
+
 Flow:
 1. `RESET_GAME` always returns `initialGameState`
 2. `validateAction(state, action)` checks constraints
@@ -257,11 +320,20 @@ Most interactive actions (drag-drop, assign, dispatch, maintenance) are always a
 
 ### Auto-Advance Logic
 
-When `ADVANCE_PHASE` fires, the engine:
-1. Runs the current phase's handler
-2. Moves to the next phase
-3. If the next phase has `autoAdvance: true`, loops back to step 1
-4. Stops when it hits a player-interactive phase
+```mermaid
+flowchart TD
+    A[ADVANCE_PHASE dispatched] --> B["Run handlePhase(state)"]
+    B --> C{Last phase<br/>IncrementTime?}
+    C -->|Yes| D["Wrap to phase 1<br/>turnNumber++"]
+    C -->|No| E[Move to next phase]
+    D --> F{Next phase<br/>autoAdvance?}
+    E --> F
+    F -->|Yes| B
+    F -->|No| G["Stop — wait<br/>for player input"]
+
+    style A fill:#D7AB3A,color:#0C234C
+    style G fill:#2D9A5D,color:#fff
+```
 
 This means one click skips past all non-interactive phases (e.g., InitializeState → ReviewResources → SetManningSchedule → EstimateNeeds → BuildTimetable all resolve in one click, stopping at InterpretATO).
 
@@ -270,6 +342,39 @@ This means one click skips past all non-interactive phases (e.g., InitializeStat
 ## 5. 14-Phase Turn Sequence
 
 Defined in `src/data/config/phases.ts`, handlers in `src/core/phases.ts`.
+
+```mermaid
+flowchart LR
+    subgraph "Auto-advance (1 click)"
+        P1["1 INIT"]:::auto
+        P3["3 RESURSER"]:::auto
+        P5["5 PERSONAL"]:::auto
+        P6["6 BEHOV"]:::auto
+        P7["7 TIDSPLAN"]:::auto
+    end
+
+    subgraph "Player interaction"
+        P2["2 ATO"]:::player
+        P4["4 GRUPP"]:::player
+        P8["8 TILLDELA"]:::player
+        P9["9 BEORDRA"]:::player
+        P10["10 STATUS"]:::player
+        P11["11 KLARGÖR"]:::player
+        P13["13 UH-PLAN"]:::player
+    end
+
+    subgraph "Auto-advance (end of turn)"
+        P12["12 RAPPORT"]:::auto
+        P14["14 TID"]:::auto
+    end
+
+    P1 --> P2 --> P3 --> P4 --> P5 --> P6 --> P7 --> P8
+    P8 --> P9 --> P10 --> P11 --> P12 --> P13 --> P14
+    P14 -.->|"turnNumber++"| P1
+
+    classDef auto fill:#1a3a5c,color:#93c5fd,stroke:#2563eb
+    classDef player fill:#0C234C,color:#D7AB3A,stroke:#D7AB3A
+```
 
 | # | Phase | Auto? | What Happens |
 |---|-------|-------|-------------|
@@ -321,6 +426,32 @@ After phase 14, the cycle wraps to phase 1 and `turnNumber` increments.
 ## 6. Stochastics & Dice Tables
 
 Defined in `src/data/config/probabilities.ts`, functions in `src/core/stochastics.ts`.
+
+```mermaid
+flowchart TD
+    subgraph "ExecutePreparation Phase"
+        A["For each MC aircraft"] --> B{"rollRandomFailure()<br/>5% chance"}
+        B -->|Pass| C["Aircraft stays ready"]
+        B -->|Fail| D["rollFailureType()"]
+        D --> E["Set status = unavailable<br/>+ maintenanceType + time"]
+    end
+
+    subgraph "UtfallModal (manual)"
+        F["Player triggers<br/>Utfall check"] --> G{"Select context"}
+        G --> H["Table A<br/>Prep/BIT"]
+        G --> I["Table B<br/>Reception"]
+        H --> J["Roll 1d6"]
+        I --> J
+        J --> K["Outcome: fault type,<br/>time, facility, capability"]
+        K --> L["+ weapon loss %<br/>+ extra time %"]
+        L --> M{Roll 5-6?}
+        M -->|Yes| N["Negative: player<br/>chooses scenario"]
+        M -->|No| O["Positive: accept<br/>& plan maintenance"]
+    end
+
+    style B fill:#D9192E,color:#fff
+    style M fill:#D7AB3A,color:#0C234C
+```
 
 ### Random Failure (per turn)
 
@@ -380,6 +511,23 @@ Use for testing and replay. Production code uses `Math.random()` via `rollDice()
 
 `src/core/recommendations.ts` generates actionable suggestions during the PrepareStatusCards phase.
 
+```mermaid
+flowchart LR
+    A["PrepareStatusCards<br/>phase runs"] --> B["generateRecommendations(state)"]
+    B --> C["Scan bases:<br/>fuel, parts, bays"]
+    B --> D["Scan aircraft:<br/>hoursToService"]
+    B --> E["Scan ATO:<br/>unmet orders"]
+    B --> F["Check policies:<br/>cannibalization"]
+    C & D & E & F --> G["Recommendation[]<br/>with applyAction"]
+    G --> H["RecommendationFeed<br/>component"]
+    H --> I{"Player choice"}
+    I -->|Apply| J["dispatch(rec.applyAction)<br/>+ dismiss"]
+    I -->|Dismiss| K["Mark dismissed"]
+
+    style A fill:#0C234C,color:#D7AB3A
+    style J fill:#2D9A5D,color:#fff
+```
+
 ### Triggers
 
 | Condition | Type | Priority |
@@ -413,13 +561,23 @@ All in `src/data/config/`.
 
 ### `scenario.ts` — 7-Day Campaign
 
-```
-Day 1: FRED (peace)
-Day 2-3: KRIS (crisis)
-Day 4: KRIS + CM threat
-Day 5: KRIG (war) + TBM threat
-Day 6: KRIG
-Day 7: KRIG + "no cannibalization" policy
+```mermaid
+gantt
+    title 7-Day Campaign Scenario
+    dateFormat X
+    axisFormat Day %s
+
+    section Phase
+    FRED           :fred, 1, 2
+    KRIS           :kris, 2, 5
+    KRIG           :crit, krig, 5, 8
+
+    section Threats
+    CM Attack      :crit, cm, 4, 5
+    TBM Risk       :crit, tbm, 5, 6
+
+    section Policy
+    No Cannibalization :active, policy, 7, 8
 ```
 
 ### `probabilities.ts` — Dice Tables
@@ -528,6 +686,40 @@ All pages use `useGame()` for shared state. Navigation is in the `TopBar`.
 
 ## 12. Component Reference
 
+### Dashboard Page Component Tree
+
+```mermaid
+graph TD
+    Index["Index.tsx (Dashboard)"]
+    Index --> TopBar
+    Index --> TurnPhaseTracker
+    Index --> PhasePanel
+    Index --> BaseMap
+    Index --> DagensMissioner
+    Index --> LarmPanel
+    Index --> FlygschemaTidslinje
+    Index --> MissionSchedule
+    Index --> AircraftPipeline
+    Index --> MaintenanceBays
+    Index --> RemainingLifeGraf
+    Index --> ResursPanel
+    Index --> RecommendationFeed
+    Index --> AIAgent
+
+    ATO["ATO.tsx"]
+    ATO --> TopBar
+    ATO --> ATOEditor
+
+    Map["Map.tsx"]
+    Map --> TopBar
+
+    BaseMap --> UtfallModal
+
+    style Index fill:#0C234C,color:#D7AB3A
+    style ATO fill:#0C234C,color:#D7AB3A
+    style Map fill:#0C234C,color:#D7AB3A
+```
+
 ### Game Components (`src/components/game/`)
 
 | Component | Purpose |
@@ -561,14 +753,28 @@ All pages use `useGame()` for shared state. Navigation is in the `TopBar`.
 
 ### BaseMap Interaction Model
 
-The BaseMap uses SVG pointer events (not HTML5 drag API):
+```mermaid
+flowchart TD
+    A["Player interacts<br/>with aircraft on BaseMap"] --> B{Action?}
+    B -->|Click| C["Select aircraft<br/>(gold ring)"]
+    B -->|Double-click| D["Open UtfallModal<br/>(dice check)"]
+    B -->|Drag to zone| E{Which zone?}
+    E -->|runway| F["sendMissionDrop()<br/>Start DCA mission"]
+    E -->|hangar| G["moveAircraftToMaintenance()<br/>If NMC + bay free"]
+    E -->|spareparts| H["applyUtfallOutcome()<br/>Quick LRU 2h"]
+    E -->|fuel| I["Toast info<br/>(fuel is base-level)"]
+    E -->|ammo| J["Toast info<br/>(scheduled for arming)"]
 
-1. Player clicks aircraft → selected (gold ring)
-2. Player clicks aircraft for UtfallModal → dice roll outcome
-3. Player drags aircraft to zone → `onDropAircraft(aircraftId, zone)` fires
-4. Zone detection: bounding box hit test against `SVG_ZONES`
+    D --> K["Roll 1d6 on<br/>Table A or B"]
+    K --> L["onUtfallOutcome()<br/>Apply result"]
 
-Drop zones: `runway` (start mission), `hangar` (maintenance), `spareparts` (quick LRU), `fuel` (info), `ammo` (info).
+    style E fill:#0C234C,color:#D7AB3A
+    style F fill:#2D9A5D,color:#fff
+    style G fill:#D7AB3A,color:#0C234C
+    style H fill:#2563eb,color:#fff
+```
+
+The BaseMap uses SVG pointer events (not HTML5 drag API). Zone detection is bounding box hit test against `SVG_ZONES`.
 
 ---
 
@@ -618,6 +824,26 @@ Aircraft are **not part of the airbase** — they are external mission assets th
 
 ### Resource Cycles
 
+```mermaid
+flowchart LR
+    subgraph "UE (Exchange Unit) Cycle"
+        BS["Base Stock"] -->|"Install on aircraft"| AC["Aircraft"]
+        AC -->|"Faulty unit removed"| BS
+        BS -->|"Send for repair<br/>5 days"| CS["Central Stock<br/>RESMAT"]
+        CS -->|"Replenish<br/>5 days"| BS
+        CS -->|"Major repair<br/>30 days"| MRO["MRO Facility"]
+        MRO -->|"Repaired unit<br/>30 days"| CS
+    end
+
+    subgraph "Emergency"
+        CAN["Cannibalization<br/>1 hour"] -.->|"Strip from<br/>grounded aircraft"| AC
+    end
+
+    style BS fill:#0C234C,color:#D7AB3A
+    style MRO fill:#1a3a5c,color:#93c5fd
+    style CAN fill:#D9192E,color:#fff
+```
+
 - **UE (Exchange Units)**: Base stock ↔ RESMAT (5 days) ↔ MRO (30 days). Cannibalization = 1 hour.
 - **Spare Parts**: 8 types with lead times from 3 to 30 days.
 - **Fuel**: Drains continuously, faster in KRIG.
@@ -660,6 +886,17 @@ Aircraft are **not part of the airbase** — they are external mission assets th
 5. If player-driven, add UI section in `PhasePanel.tsx`
 
 ### Add a New Game Action
+
+```mermaid
+flowchart LR
+    A["1. types/game.ts<br/>Add to GameAction union"] --> B["2. validators.ts<br/>Add validation case"]
+    B --> C["3. engine.ts<br/>Add handler in reducer"]
+    C --> D["4. useGameEngine.ts<br/>Add convenience method"]
+    D --> E["5. Component<br/>useGame().myMethod()"]
+
+    style A fill:#0C234C,color:#D7AB3A
+    style E fill:#2D9A5D,color:#fff
+```
 
 1. Add variant to `GameAction` union in `src/types/game.ts`
 2. Add validation in `validateAction()` in `src/core/validators.ts`
