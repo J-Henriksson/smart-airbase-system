@@ -179,11 +179,22 @@ const Index = () => {
           </div>
 
           {/* ROW 2: Base Map */}
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-primary" />
-              <h3 className="font-sans font-bold text-sm text-foreground">BASÖVERSIKT — {selectedBase.name}</h3>
-              <span className="text-[9px] font-mono text-muted-foreground ml-2">Klicka på byggnader för detaljer</span>
+          <div className="rounded-xl overflow-hidden"
+            style={{
+              background: "hsl(0 0% 100%)",
+              border: "1px solid hsl(215 14% 84%)",
+              boxShadow: "0 1px 3px hsl(220 63% 18% / 0.06), 0 4px 12px hsl(220 63% 18% / 0.04)",
+            }}>
+            <div className="px-4 py-3 flex items-center gap-2"
+              style={{ borderBottom: "1px solid hsl(215 14% 88%)",
+                background: "linear-gradient(90deg, hsl(220 63% 18% / 0.04), transparent)" }}>
+              <MapPin className="h-4 w-4" style={{ color: "hsl(220 63% 30%)" }} />
+              <h3 className="font-sans font-bold text-sm" style={{ color: "hsl(220 63% 18%)" }}>
+                BASÖVERSIKT — {selectedBase.name}
+              </h3>
+              <span className="text-[9px] font-mono ml-2" style={{ color: "hsl(218 15% 55%)" }}>
+                Klicka på byggnader för detaljer
+              </span>
             </div>
             <BaseMap
               base={selectedBase}
@@ -194,24 +205,42 @@ const Index = () => {
             />
           </div>
 
-          {/* ROW 3: Spelprocess – Uppdragsflöde */}
-          <div className="bg-card border border-border rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Activity className="h-4 w-4 text-primary" />
-              <h3 className="font-sans font-bold text-sm text-foreground">SPELPROCESS — UPPDRAGSFLÖDE</h3>
+          {/* ROW 3: Spelprocess */}
+          <div className="rounded-xl overflow-hidden"
+            style={{
+              background: "hsl(0 0% 100%)",
+              border: "1px solid hsl(215 14% 84%)",
+              boxShadow: "0 1px 3px hsl(220 63% 18% / 0.06)",
+            }}>
+            <div className="px-4 py-3 flex items-center gap-2"
+              style={{ borderBottom: "1px solid hsl(215 14% 88%)",
+                background: "linear-gradient(90deg, hsl(220 63% 18% / 0.04), transparent)" }}>
+              <Activity className="h-4 w-4" style={{ color: "hsl(220 63% 30%)" }} />
+              <h3 className="font-sans font-bold text-sm" style={{ color: "hsl(220 63% 18%)" }}>
+                SPELPROCESS — UPPDRAGSFLÖDE
+              </h3>
               <span className="text-[9px] text-muted-foreground font-mono ml-auto">Start från ATO</span>
             </div>
-            <SpelprocessFlode base={selectedBase} />
+            <div className="p-4">
+              <SpelprocessFlode base={selectedBase} />
+            </div>
           </div>
 
-          {/* ROW 3: Dagens missioner + Larm */}
+          {/* ROW 4: Dagens missioner + Larm */}
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4">
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Crosshair className="h-4 w-4 text-primary" />
-                  <h3 className="font-sans font-bold text-sm text-foreground">DAGENS MISSIONER — ATO-UPPDRAG</h3>
-                </div>
+            <div className="rounded-xl overflow-hidden"
+              style={{
+                background: "hsl(0 0% 100%)",
+                border: "1px solid hsl(215 14% 84%)",
+                boxShadow: "0 1px 3px hsl(220 63% 18% / 0.06)",
+              }}>
+              <div className="px-4 py-3 flex items-center gap-2"
+                style={{ borderBottom: "1px solid hsl(215 14% 88%)",
+                  background: "linear-gradient(90deg, hsl(220 63% 18% / 0.04), transparent)" }}>
+                <Crosshair className="h-4 w-4" style={{ color: "hsl(220 63% 30%)" }} />
+                <h3 className="font-sans font-bold text-sm" style={{ color: "hsl(220 63% 18%)" }}>
+                  DAGENS MISSIONER — ATO-UPPDRAG
+                </h3>
               </div>
               <div className="p-4">
                 <DagensMissioner base={selectedBase} hour={state.hour} phase={state.phase} />
@@ -220,13 +249,24 @@ const Index = () => {
             <LarmPanel events={state.events} />
           </div>
 
-          {/* ROW 4: Flygschema Tidslinje */}
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b border-border">
+          {/* ROW 5: Flygschema Tidslinje */}
+          <div className="rounded-xl overflow-hidden"
+            style={{
+              background: "hsl(0 0% 100%)",
+              border: "1px solid hsl(215 14% 84%)",
+              boxShadow: "0 1px 3px hsl(220 63% 18% / 0.06)",
+            }}>
+            <div className="px-4 py-3"
+              style={{ borderBottom: "1px solid hsl(215 14% 88%)",
+                background: "linear-gradient(90deg, hsl(220 63% 18% / 0.04), transparent)" }}>
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-status-blue" />
-                <h3 className="font-sans font-bold text-sm text-foreground">FLYGSCHEMA — DAGENS AKTIVITETER</h3>
-                <span className="text-[9px] text-muted-foreground font-mono ml-2">06:00–22:00 · Timmar kvar till 100h-service visas höger</span>
+                <Clock className="h-4 w-4" style={{ color: "hsl(220 63% 38%)" }} />
+                <h3 className="font-sans font-bold text-sm" style={{ color: "hsl(220 63% 18%)" }}>
+                  FLYGSCHEMA — DAGENS AKTIVITETER
+                </h3>
+                <span className="text-[9px] font-mono ml-2" style={{ color: "hsl(218 15% 55%)" }}>
+                  06:00–22:00 · Timmar kvar till 100h-service visas höger
+                </span>
               </div>
             </div>
             <div className="p-4">
@@ -234,10 +274,10 @@ const Index = () => {
             </div>
           </div>
 
-          {/* ROW 5: Uppdragsschema (Gantt) */}
+          {/* ROW 6: Uppdragsschema (Gantt) */}
           <MissionSchedule base={selectedBase} day={state.day} hour={state.hour} phase={state.phase} />
 
-          {/* ROW 6: Aircraft Pipeline + Maintenance */}
+          {/* ROW 7: Aircraft Pipeline + Maintenance */}
           <AircraftPipeline
             base={selectedBase}
             onStartMaintenance={handleStartMaintenance}
@@ -247,11 +287,20 @@ const Index = () => {
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <MaintenanceBays base={selectedBase} onDropAircraft={handleDropAircraft} />
             {/* Remaining Life */}
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-border">
+            <div className="rounded-xl overflow-hidden"
+              style={{
+                background: "hsl(0 0% 100%)",
+                border: "1px solid hsl(215 14% 84%)",
+                boxShadow: "0 1px 3px hsl(220 63% 18% / 0.06)",
+              }}>
+              <div className="px-4 py-3"
+                style={{ borderBottom: "1px solid hsl(215 14% 88%)",
+                  background: "linear-gradient(90deg, hsl(220 63% 18% / 0.04), transparent)" }}>
                 <div className="flex items-center gap-2">
-                  <PlaneTakeoff className="h-4 w-4 text-primary" />
-                  <h3 className="font-sans font-bold text-sm text-foreground">REMAINING LIFE & SERVICE</h3>
+                  <PlaneTakeoff className="h-4 w-4" style={{ color: "hsl(220 63% 30%)" }} />
+                  <h3 className="font-sans font-bold text-sm" style={{ color: "hsl(220 63% 18%)" }}>
+                    REMAINING LIFE & SERVICE
+                  </h3>
                 </div>
               </div>
               <div className="p-4">
@@ -261,13 +310,12 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Right sidebar: Resources + AI */}
-        <div className="border-l border-border h-full overflow-y-auto hidden lg:flex flex-col">
-          {/* Resources */}
-          <div className="p-3 border-b border-border">
+        {/* Right sidebar */}
+        <div className="h-full overflow-y-auto hidden lg:flex flex-col"
+          style={{ borderLeft: "1px solid hsl(215 14% 86%)", background: "hsl(0 0% 100%)" }}>
+          <div className="p-3" style={{ borderBottom: "1px solid hsl(215 14% 88%)" }}>
             <ResursPanel base={selectedBase} phase={state.phase} />
           </div>
-          {/* AI Agent */}
           <div className="flex-1 min-h-[300px]">
             <AIAgent getResourceSummary={getResourceSummary} />
           </div>
