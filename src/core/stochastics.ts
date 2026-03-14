@@ -5,6 +5,10 @@ import {
   EXTRA_MAINTENANCE_TIME_BY_ROLL,
   BASE_FAILURE_RATE,
   FAILURE_TYPE_WEIGHTS,
+  QUICK_FAILURE_TYPE_WEIGHTS,
+  MTBF_GRACE_HOURS,
+  YELLOW_FAILURE_RATE,
+  RED_FAILURE_RATE,
   type UtfallOutcome,
 } from "@/data/config/probabilities";
 import type { MaintenanceType } from "@/types/game";
@@ -34,16 +38,35 @@ export function rollDice(sides = 6): number {
   return Math.floor(Math.random() * sides) + 1;
 }
 
-/** Check if a random failure occurs for an MC aircraft */
-export function rollRandomFailure(): boolean {
-  return Math.random() < BASE_FAILURE_RATE;
+/** Check if a random failure occurs for an MC aircraft.
+ *  Returns false unconditionally if flightHours < MTBF_GRACE_HOURS. */
+export function rollRandomFailure(flightHours: number): boolean {
+  if (flightHours < MTBF_GRACE_HOURS) return false;
+  return Math.random() < (YELLOW_FAILURE_RATE + RED_FAILURE_RATE);
 }
 
-/** Get random failure type and repair time */
+/** After rollRandomFailure returns true, determine if the failure is critical (red).
+ *  ~17% of failures are critical → unavailable; ~83% are yellow → under_maintenance. */
+export function rollIsCriticalFailure(): boolean {
+  return Math.random() < RED_FAILURE_RATE / (YELLOW_FAILURE_RATE + RED_FAILURE_RATE);
+}
+
+/** Get random failure type and repair time (any severity) */
 export function rollFailureType(): { type: MaintenanceType; time: number } {
   const totalWeight = FAILURE_TYPE_WEIGHTS.reduce((s, f) => s + f.weight, 0);
   let r = Math.random() * totalWeight;
   for (const f of FAILURE_TYPE_WEIGHTS) {
+    r -= f.weight;
+    if (r <= 0) return { type: f.type, time: f.time };
+  }
+  return { type: "quick_lru", time: 2 };
+}
+
+/** Get a quick (2–4h) failure type for yellow non-critical failures */
+export function rollQuickFailureType(): { type: MaintenanceType; time: number } {
+  const totalWeight = QUICK_FAILURE_TYPE_WEIGHTS.reduce((s, f) => s + f.weight, 0);
+  let r = Math.random() * totalWeight;
+  for (const f of QUICK_FAILURE_TYPE_WEIGHTS) {
     r -= f.weight;
     if (r <= 0) return { type: f.type, time: f.time };
   }

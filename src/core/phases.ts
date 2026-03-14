@@ -3,7 +3,7 @@ import { isMissionCapable } from "@/types/game";
 import { getPhaseForDay } from "@/data/config/scenario";
 import { generateATOOrders } from "@/data/initialGameState";
 import { FUEL_DRAIN_RATE } from "@/data/config/capacities";
-import { rollRandomFailure, rollFailureType } from "./stochastics";
+import { rollRandomFailure, rollFailureType, rollIsCriticalFailure, rollQuickFailureType } from "./stochastics";
 import { generateRecommendations } from "./recommendations";
 
 /** Handle a specific phase, returning the updated state */
@@ -123,22 +123,41 @@ function handleExecutePreparation(state: GameState): GameState {
 
   const updatedBases = state.bases.map((base) => {
     const updatedAircraft = base.aircraft.map((ac) => {
-      // Random failure on ready aircraft
-      if (ac.status === "ready" && rollRandomFailure()) {
-        const { type: failType, time: failTime } = rollFailureType();
-        newEvents.push({
-          id: crypto.randomUUID(),
-          timestamp: `Dag ${state.day} ${String(state.hour).padStart(2, "0")}:00`,
-          type: "warning",
-          message: `${ac.tailNumber} rapporterar fel — kräver ${failType} (${failTime}h)`,
-          base: base.id,
-        });
-        return {
-          ...ac,
-          status: "unavailable" as AircraftStatus,
-          maintenanceType: failType,
-          maintenanceTimeRemaining: failTime,
-        };
+      // Random failure on ready aircraft — MTBF-gated (no failures before 15 flight hours)
+      if (ac.status === "ready" && rollRandomFailure(ac.flightHours)) {
+        if (rollIsCriticalFailure()) {
+          // Red: critical failure → unavailable (NMC)
+          const { type: failType, time: failTime } = rollFailureType();
+          newEvents.push({
+            id: crypto.randomUUID(),
+            timestamp: `Dag ${state.day} ${String(state.hour).padStart(2, "0")}:00`,
+            type: "critical",
+            message: `🔴 KRITISKT FEL: ${ac.tailNumber} — ${failType} (${failTime}h) — NMC`,
+            base: base.id,
+          });
+          return {
+            ...ac,
+            status: "unavailable" as AircraftStatus,
+            maintenanceType: failType,
+            maintenanceTimeRemaining: failTime,
+          };
+        } else {
+          // Yellow: minor failure → under_maintenance 2–4h
+          const { type: failType, time: failTime } = rollQuickFailureType();
+          newEvents.push({
+            id: crypto.randomUUID(),
+            timestamp: `Dag ${state.day} ${String(state.hour).padStart(2, "0")}:00`,
+            type: "warning",
+            message: `🟡 Underhållsbehov: ${ac.tailNumber} — ${failType} (${failTime}h)`,
+            base: base.id,
+          });
+          return {
+            ...ac,
+            status: "under_maintenance" as AircraftStatus,
+            maintenanceType: failType,
+            maintenanceTimeRemaining: failTime,
+          };
+        }
       }
       return ac;
     });

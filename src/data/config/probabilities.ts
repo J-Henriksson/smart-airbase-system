@@ -50,10 +50,25 @@ export const SERVICE_TYPES = {
 /** Random failure probability per hour for MC aircraft (base rate) */
 export const BASE_FAILURE_RATE = 1 / 20; // 5% per turn (1d20 = 1)
 
+/** MTBF: guaranteed safe flight hours before any random failure can occur */
+export const MTBF_GRACE_HOURS = 7;
+
+/** Probability of a yellow (maintainable, quick fix) failure per turn after grace hours */
+export const YELLOW_FAILURE_RATE = 0.05; // 5% → under_maintenance 2–4h
+
+/** Probability of a red (critical) failure per turn after grace hours */
+export const RED_FAILURE_RATE = 0.01; // 1% → unavailable
+
 /** Failure type weights when a random failure occurs */
 export const FAILURE_TYPE_WEIGHTS: { type: MaintenanceType; weight: number; time: number }[] = [
   { type: "quick_lru", weight: 2, time: 2 },
   { type: "complex_lru", weight: 1, time: 6 },
   { type: "direct_repair", weight: 1, time: 16 },
+  { type: "troubleshooting", weight: 2, time: 4 },
+];
+
+/** Failure type weights for yellow (non-critical) failures — quick 2–4h fixes only */
+export const QUICK_FAILURE_TYPE_WEIGHTS: { type: MaintenanceType; weight: number; time: number }[] = [
+  { type: "quick_lru", weight: 3, time: 2 },
   { type: "troubleshooting", weight: 2, time: 4 },
 ];
