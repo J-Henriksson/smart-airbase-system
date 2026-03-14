@@ -39,7 +39,7 @@ const SVG_ZONES: {
   { id: "runway",     x: 60,  y: 148, w: 780, h: 62,  label: "✈️  STARTA UPPDRAG",    colorFill: "rgba(215,171,58,0.30)",  colorBorder: "#D7AB3A" },
   { id: "hangar",     x: 55,  y: 313, w: 343, h: 125, label: "🔧  UNDERHÅLL / SERVICE", colorFill: "rgba(12,35,76,0.30)",    colorBorder: "#0C234C" },
   { id: "spareparts", x: 200, y: 40,  w: 130, h: 70,  label: "📦  SNABB LRU-REP",      colorFill: "rgba(217,25,46,0.25)",   colorBorder: "#D9192E" },
-  { id: "fuel",       x: 430, y: 370, w: 110, h: 72,  label: "⛽  TANKNING",            colorFill: "rgba(12,35,76,0.25)",    colorBorder: "#0C234C" },
+  { id: "fuel",       x: 430, y: 356, w: 110, h: 72,  label: "⛽  TANKNING",            colorFill: "rgba(12,35,76,0.25)",    colorBorder: "#0C234C" },
   { id: "ammo",       x: 430, y: 318, w: 130, h: 40,  label: "💣  BEVÄPNING",           colorFill: "rgba(217,25,46,0.25)",   colorBorder: "#D9192E" },
 ];
 
@@ -395,7 +395,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
             const fuelPct = base.fuel / 100;
             const fuelColor = base.fuel > 60 ? "#0C234C" : base.fuel > 30 ? "#D7AB3A" : "#D9192E";
             const fuelX = 430;
-            const fuelY = 370;
+            const fuelY = 356;
             return (
               <g style={{ cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); toggle("fuel"); }}>
                 <rect x={fuelX} y={fuelY} width="110" height="72" rx="3"
