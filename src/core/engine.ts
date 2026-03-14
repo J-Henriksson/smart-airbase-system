@@ -374,6 +374,7 @@ function handleMarkFaultNMC(
         return {
           ...ac,
           status: "unavailable" as AircraftStatus,
+          health: 0,
           maintenanceType: maintenanceTypeKey as any,
           maintenanceTimeRemaining: repairTime,
         };
@@ -394,7 +395,7 @@ function handlePauseMaintenance(state: GameState, baseId: string, aircraftId: st
     const aircraft = base.aircraft.map((ac) => {
       if (ac.id !== aircraftId || ac.status !== "under_maintenance") return ac;
       // Pause: work stops, aircraft returns to unavailable (fault still present)
-      return { ...ac, status: "unavailable" as AircraftStatus };
+      return { ...ac, status: "unavailable" as AircraftStatus, health: 0 };
     });
     const maintCount = aircraft.filter((a) => a.status === "under_maintenance").length;
     return {

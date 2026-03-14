@@ -36,11 +36,11 @@ const SVG_ZONES: {
   colorFill: string;
   colorBorder: string;
 }[] = [
-  { id: "runway",     x: 60,  y: 148, w: 780, h: 62,  label: "✈️  STARTA UPPDRAG",    colorFill: "rgba(215,171,58,0.30)",  colorBorder: "#D7AB3A" },
-  { id: "hangar",     x: 55,  y: 313, w: 343, h: 125, label: "🔧  UNDERHÅLL / SERVICE", colorFill: "rgba(12,35,76,0.30)",    colorBorder: "#0C234C" },
-  { id: "spareparts", x: 200, y: 40,  w: 130, h: 70,  label: "📦  SNABB LRU-REP",      colorFill: "rgba(217,25,46,0.25)",   colorBorder: "#D9192E" },
-  { id: "fuel",       x: 432, y: 372, w: 110, h: 72,  label: "⛽  TANKNING",            colorFill: "rgba(12,35,76,0.25)",    colorBorder: "#0C234C" },
-  { id: "ammo",       x: 430, y: 318, w: 130, h: 40,  label: "💣  BEVÄPNING",           colorFill: "rgba(217,25,46,0.25)",   colorBorder: "#D9192E" },
+  { id: "runway",     x: 60,  y: 148, w: 780, h: 62,  label: "STARTA UPPDRAG",    colorFill: "rgba(215,171,58,0.30)",  colorBorder: "#D7AB3A" },
+  { id: "hangar",     x: 55,  y: 313, w: 343, h: 125, label: "UNDERHALL / SERVICE", colorFill: "rgba(12,35,76,0.30)",    colorBorder: "#0C234C" },
+  { id: "spareparts", x: 200, y: 40,  w: 130, h: 70,  label: "SNABB LRU-REP",      colorFill: "rgba(217,25,46,0.25)",   colorBorder: "#D9192E" },
+  { id: "fuel",       x: 432, y: 372, w: 110, h: 72,  label: "TANKNING",            colorFill: "rgba(12,35,76,0.25)",    colorBorder: "#0C234C" },
+  { id: "ammo",       x: 430, y: 318, w: 130, h: 40,  label: "BEVÄPNING",           colorFill: "rgba(217,25,46,0.25)",   colorBorder: "#D9192E" },
 ];
 
 function getZoneAt(x: number, y: number): DropZone | null {
@@ -60,7 +60,7 @@ const AC_COLOR: Record<string, string> = {
   returning: "#5a3a8a",
   recovering: "#8a5a2a",
   under_maintenance: "#D7AB3A",
-  unavailable: "#D9192E",
+  unavailable: "#6B7280",
 };
 
 const AC_LABEL: Record<string, string> = {
@@ -191,7 +191,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
               <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#0C234C" strokeWidth="0.3" opacity="0.15" />
             </pattern>
-            {["0C234C","D7AB3A","D9192E","1a4a8a","5a3a8a","8a6a1a","2a7a5a","1a5a7a","8a5a2a","B06000","CC2222"].map((hex) => (
+            {["0C234C","D7AB3A","D9192E","6B7280","1a4a8a","5a3a8a","8a6a1a","2a7a5a","1a5a7a","8a5a2a","B06000","CC2222"].map((hex) => (
               <filter key={hex} id={`tint-${hex}`}>
                 <feFlood floodColor={`#${hex}`} result="c" />
                 <feComposite in="c" in2="SourceAlpha" operator="in" />
@@ -203,7 +203,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
           {/* Drag-drop instructions banner */}
           <rect x="20" y="8" width="860" height="22" rx="3" fill="#0C234C" opacity="0.92" />
           <text x="30" y="22" fontSize="9" fill="#D7AB3A" fontFamily="monospace" fontWeight="bold">
-            💡 Dra flygplan → Bana (✈️ uppdrag) · Hangar (🔧 underhåll) · Reservdel (📦 LRU 2h) · Bränsle (⛽) · Ammo (💣)
+            Dra flygplan → Bana (uppdrag) · Hangar (underhall) · Reservdel (LRU 2h) · Bränsle · Ammo
           </text>
 
           {/* ── Perimeter fence */}

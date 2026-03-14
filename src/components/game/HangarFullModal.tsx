@@ -24,7 +24,7 @@ export function HangarFullModal({ incomingAircraft, maintenanceAircraft, baseId,
       >
         {/* Header */}
         <div className="px-6 py-4 flex items-center gap-3" style={{ background: "#0a1d3e", borderBottom: "1px solid #D7AB3A44" }}>
-          <span className="text-2xl">⚠️</span>
+          <span className="text-2xl font-mono font-black" style={{ color: "#D7AB3A" }}>!</span>
           <div>
             <div className="text-xs font-mono font-bold" style={{ color: "#D7AB3A" }}>VARNING — ALLA HANGARPLATSER FULLA</div>
             <div className="text-base font-mono font-black text-white">
@@ -39,7 +39,7 @@ export function HangarFullModal({ incomingAircraft, maintenanceAircraft, baseId,
               {/* Info */}
               <div className="rounded-xl p-4" style={{ background: "#1a3a6a", border: "1px solid #2a5a9a" }}>
                 <div className="text-xs font-mono" style={{ color: "#ccd4e8" }}>
-                  Alla 4 underhållsplatser är upptagna. Vill du pausa arbetet på ett av de nuvarande flygplanen
+                  Alla underhållsplatser är upptagna. Vill du pausa arbetet på ett av de nuvarande flygplanen
                   för att göra plats, eller ignorera <span style={{ color: "#D7AB3A" }}>{incomingAircraft.tailNumber}</span> tills vidare?
                 </div>
               </div>
@@ -51,7 +51,7 @@ export function HangarFullModal({ incomingAircraft, maintenanceAircraft, baseId,
                   className="flex-1 py-3 rounded-xl font-mono font-bold text-sm transition-all hover:brightness-110 active:scale-95"
                   style={{ background: "#4a3a1a", border: "1px solid #D7AB3A", color: "#D7AB3A" }}
                 >
-                  ⏸ Pausa ett plan — ge plats
+                  Pausa ett plan — ge plats
                 </button>
                 <button
                   onClick={onIgnore}
@@ -82,7 +82,7 @@ export function HangarFullModal({ incomingAircraft, maintenanceAircraft, baseId,
                       {ac.maintenanceTimeRemaining != null ? `${ac.maintenanceTimeRemaining}h kvar` : "—"}
                     </span>
                     <span className="text-xs px-2 py-0.5 rounded" style={{ background: "#5a2a1a", color: "#ff9966" }}>
-                      Pausa ⏸
+                      Pausa
                     </span>
                   </button>
                 ))}

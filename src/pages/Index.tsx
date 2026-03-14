@@ -18,6 +18,7 @@ import { LandingReceptionModal } from "@/components/game/LandingReceptionModal";
 import { RunwayCheckModal } from "@/components/game/RunwayCheckModal";
 import { MaintenanceConfirmModal } from "@/components/game/MaintenanceConfirmModal";
 import { HangarFullModal } from "@/components/game/HangarFullModal";
+import { LastBayWarningModal } from "@/components/game/LastBayWarningModal";
 import { toast } from "sonner";
 import { BaseType } from "@/types/game";
 import { ShieldCheck, Crosshair, Hammer, Users, Siren, Clock, MapPin, PlaneTakeoff } from "lucide-react";
@@ -29,6 +30,7 @@ const Index = () => {
   const [pendingMaintenanceCheck, setPendingMaintenanceCheck] = useState<string | null>(null);
   const [redRunwayWarning, setRedRunwayWarning] = useState<string | null>(null);
   const [hangarFullWarning, setHangarFullWarning] = useState<string | null>(null);
+  const [lastBayWarning, setLastBayWarning] = useState<string | null>(null);
 
   const selectedBase = state.bases.find((b) => b.id === selectedBaseId)!;
 
@@ -62,6 +64,11 @@ const Index = () => {
       }
       if (selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) {
         setHangarFullWarning(aircraftId);
+        return;
+      }
+      // Warn before filling the last available bay
+      if (selectedBase.maintenanceBays.total - selectedBase.maintenanceBays.occupied === 1) {
+        setLastBayWarning(aircraftId);
         return;
       }
       // Known fault (from runway ignore or landing check) — skip dice, place directly
@@ -418,6 +425,29 @@ const Index = () => {
               </div>
             </div>
           </div>
+        );
+      })()}
+
+      {/* Last Bay Warning Modal */}
+      {lastBayWarning && (() => {
+        const ac = selectedBase.aircraft.find((a) => a.id === lastBayWarning);
+        if (!ac) return null;
+        const proceedWithHangar = () => {
+          setLastBayWarning(null);
+          if (ac.status === "unavailable" && ac.maintenanceTimeRemaining != null && ac.maintenanceType != null) {
+            hangarDropConfirm(selectedBaseId, ac.id, ac.maintenanceTimeRemaining, ac.maintenanceType, false);
+          } else {
+            setPendingMaintenanceCheck(ac.id);
+          }
+        };
+        return (
+          <LastBayWarningModal
+            key={lastBayWarning}
+            aircraft={ac}
+            totalBays={selectedBase.maintenanceBays.total}
+            onContinue={proceedWithHangar}
+            onReturnToApron={() => setLastBayWarning(null)}
+          />
         );
       })()}
 
