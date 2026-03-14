@@ -15,7 +15,76 @@ interface Slot {
   color: string;
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 const MISSION_TYPES = ["QRA", "DCA", "RECCE", "AI_DT", "ESCORT", "AEW"];
+const MISSION_LABELS = new Set(["MISSION", ...MISSION_TYPES]);
+const SERVICE_LABELS = new Set(["Service", "Major Maintenance", "forebyggande"]);
+const MAINT_WAIT_LABELS = new Set(["avhjalpande", "NMC"]);
+
+type ActivityType = "MISSION" | "GROUND" | "SERVICE" | "MAINT_WAIT";
+
+type ActivityBlock = {
+  type: ActivityType;
+  start_time: number;
+  end_time: number;
+  label: string;
+};
+
+type FlygschemaEntry = {
+  aircraftId: string;
+  currentLife: number;
+  status: Aircraft["status"];
+  blocks: ActivityBlock[];
+};
+
+type LifeSeriesPoint = { t: number; [key: string]: number };
+
+function mapScheduleToSeries(
+  flygschema: FlygschemaEntry[],
+  maxLife = 100,
+  resolutionMinutes = 15,
+  visualWearMultiplier = 10,
+  offsetByAircraft: Record<string, number> = {},
+): LifeSeriesPoint[] {
+  const step = resolutionMinutes / 60;
+  const times: number[] = [];
+  for (let t = 0; t <= 24 + 1e-6; t += step) times.push(Number(t.toFixed(4)));
+
+  const series: LifeSeriesPoint[] = times.map((t) => ({ t }));
+
+  flygschema.forEach((ac) => {
+    let life = clamp(ac.currentLife, 0, maxLife);
+    const offset = offsetByAircraft[ac.aircraftId] ?? 0;
+    const blocks = [...ac.blocks].sort((a, b) => a.start_time - b.start_time);
+    let blockIdx = 0;
+    let current: ActivityBlock | undefined = blocks[blockIdx];
+
+    for (let i = 0; i < times.length; i += 1) {
+      const t = times[i];
+
+      while (current && t >= current.end_time - 1e-6) {
+        if (current.type === "SERVICE") {
+          life = maxLife;
+        }
+        blockIdx += 1;
+        current = blocks[blockIdx];
+      }
+
+      if (current && t >= current.start_time - 1e-6) {
+        if (current.type === "MISSION") {
+          life = clamp(life - step * visualWearMultiplier, 0, maxLife);
+        }
+      }
+
+      series[i][ac.aircraftId] = Number(clamp(life + offset, 0, maxLife).toFixed(3));
+    }
+  });
+
+  return series;
+}
 
 function getSlots(ac: Aircraft, hour: number): Slot[] {
   const hash = parseInt(ac.id.replace(/\D/g, "")) || 1;
@@ -62,6 +131,7 @@ function getSlots(ac: Aircraft, hour: number): Slot[] {
 
 export function FlygschemaTidslinje({ base, hour }: FlygschemaTidslinjeProps) {
   const [selectedAc, setSelectedAc] = useState<string | null>(null);
+  const [hoveredAc, setHoveredAc] = useState<string | null>(null);
 
   const START = 6, END = 22, SPAN = 16;
   const hourMarks = [6, 8, 10, 12, 14, 16, 18, 20, 22];
@@ -71,6 +141,65 @@ export function FlygschemaTidslinje({ base, hour }: FlygschemaTidslinjeProps) {
     `${((Math.min(e, END) - Math.max(s, START)) / SPAN) * 100}%`;
 
   const freeSlots = base.maintenanceBays.total - base.maintenanceBays.occupied;
+
+  const flygschema: FlygschemaEntry[] = base.aircraft.map((ac) => {
+    const slots = getSlots(ac, hour);
+    const blocks: ActivityBlock[] = slots.map((slot) => {
+      const raw = slot.label?.trim();
+      if (MISSION_LABELS.has(raw) || MISSION_TYPES.includes(raw)) {
+        return { type: "MISSION", start_time: slot.start, end_time: slot.end, label: raw };
+      }
+      if (SERVICE_LABELS.has(raw)) {
+        return { type: "SERVICE", start_time: slot.start, end_time: slot.end, label: raw };
+      }
+      if (MAINT_WAIT_LABELS.has(raw)) {
+        return { type: "MAINT_WAIT", start_time: slot.start, end_time: slot.end, label: raw };
+      }
+      return { type: "GROUND", start_time: slot.start, end_time: slot.end, label: raw };
+    });
+
+    return {
+      aircraftId: ac.tailNumber,
+      currentLife: ac.hoursToService,
+      status: ac.status,
+      blocks,
+    };
+  });
+
+  const offsets: Record<string, number> = {};
+  flygschema.forEach((ac, i) => {
+    offsets[ac.aircraftId] = (i % 2 === 0 ? 1 : -1) * (1 + (i % 3));
+  });
+
+  const chartW = 640;
+  const chartH = 210;
+  const m = { l: 56, r: 16, t: 18, b: 32 };
+  const xScale = (v: number) => m.l + ((v - 0) / 24) * (chartW - m.l - m.r);
+  const yScale = (v: number) => m.t + (1 - (v - 0) / 100) * (chartH - m.t - m.b);
+
+  const xTicks = [0, 4, 8, 12, 16, 20, 24];
+  const yTicks = [0, 25, 50, 75, 100];
+
+  const lifeSeries = mapScheduleToSeries(flygschema, 100, 15, 10, offsets);
+
+  const labelTargets = flygschema.map((ac, i) => {
+    const lastPoint = lifeSeries[lifeSeries.length - 1];
+    const value = lastPoint?.[ac.aircraftId] ?? ac.currentLife;
+    const desiredY = yScale(value);
+    return { id: ac.aircraftId, desiredY, value, idx: i };
+  });
+
+  const sortedLabels = [...labelTargets].sort((a, b) => a.desiredY - b.desiredY);
+  const minGap = 8;
+  const labelYMap: Record<string, number> = {};
+  const labelValueMap: Record<string, number> = {};
+  let lastY = -Infinity;
+  sortedLabels.forEach((lbl) => {
+    const y = Math.max(lbl.desiredY, lastY + minGap);
+    labelYMap[lbl.id] = clamp(y, m.t + 6, chartH - m.b - 6);
+    labelValueMap[lbl.id] = lbl.value;
+    lastY = labelYMap[lbl.id];
+  });
 
   return (
     <div className="space-y-2">
@@ -132,6 +261,8 @@ export function FlygschemaTidslinje({ base, hour }: FlygschemaTidslinjeProps) {
                     : "hover:bg-muted/40"
                 }`}
                 onClick={() => setSelectedAc(isSelected ? null : ac.id)}
+                onMouseEnter={() => setHoveredAc(ac.tailNumber)}
+                onMouseLeave={() => setHoveredAc(null)}
               >
                 {/* Aircraft label */}
                 <div className="w-[100px] shrink-0 px-1.5 py-0.5 flex items-center gap-1">
@@ -319,6 +450,112 @@ export function FlygschemaTidslinje({ base, hour }: FlygschemaTidslinjeProps) {
         <span className="text-[8px] font-mono text-muted-foreground ml-auto">
           Siffra höger = timmar kvar till 100h-service
         </span>
+      </div>
+
+      {/* Uptime vs life chart */}
+      <div className="pt-3 border-t border-border">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-[10px] font-mono font-bold text-foreground">
+            UPTIME — FLYGTID I LUFTEN vs LIVSLÄNGD
+          </div>
+          <div className="text-[9px] font-mono text-muted-foreground">
+            Storlek = flygtid idag · Y = kvarvarande liv · X = kalendertid (total flygtid)
+          </div>
+        </div>
+        <div className="w-full overflow-hidden rounded-lg border border-slate-700 bg-slate-900/90">
+          <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-[190px]">
+            {/* Grid */}
+            {yTicks.map((tick, i) => {
+              const y = yScale(tick);
+              return (
+                <line key={`y-${i}`} x1={m.l} y1={y} x2={chartW - m.r} y2={y} stroke="rgba(148,163,184,0.2)" strokeWidth="1" />
+              );
+            })}
+            {xTicks.map((tick, i) => {
+              const x = xScale(tick);
+              return (
+                <line key={`x-${i}`} x1={x} y1={m.t} x2={x} y2={chartH - m.b} stroke="rgba(148,163,184,0.18)" strokeWidth="1" />
+              );
+            })}
+
+            {/* Axes */}
+            <line x1={m.l} y1={m.t} x2={m.l} y2={chartH - m.b} stroke="rgba(226,232,240,0.7)" strokeWidth="1.2" />
+            <line x1={m.l} y1={chartH - m.b} x2={chartW - m.r} y2={chartH - m.b} stroke="rgba(226,232,240,0.7)" strokeWidth="1.2" />
+
+            {/* Y ticks */}
+            {yTicks.map((tick, i) => {
+              const y = yScale(tick);
+              return (
+                <text key={`yt-${i}`} x={m.l - 6} y={y + 3} textAnchor="end" fontSize="9" fill="rgba(226,232,240,0.7)" fontFamily="monospace">
+                  {Math.round(tick)}
+                </text>
+              );
+            })}
+
+            {/* X ticks */}
+            {xTicks.map((tick, i) => {
+              const x = xScale(tick);
+              return (
+                <text key={`xt-${i}`} x={x} y={chartH - m.b + 14} textAnchor="middle" fontSize="9" fill="rgba(226,232,240,0.7)" fontFamily="monospace">
+                  {String(Math.round(tick)).padStart(2, "0")}:00
+                </text>
+              );
+            })}
+
+            {/* Axis labels */}
+            <text x={chartW / 2} y={chartH - 6} textAnchor="middle" fontSize="9" fill="rgba(226,232,240,0.7)" fontFamily="monospace">
+              Kalendertid (00–24)
+            </text>
+            <text
+              x={12}
+              y={chartH / 2}
+              textAnchor="middle"
+              fontSize="9"
+              fill="rgba(226,232,240,0.7)"
+              fontFamily="monospace"
+              transform={`rotate(-90 12 ${chartH / 2})`}
+            >
+              Kvarvarande liv (h)
+            </text>
+
+            {/* Lines */}
+            {flygschema.map((ac, i) => {
+              const isLowLife = ac.currentLife < 30 || ac.status === "unavailable" || ac.status === "under_maintenance";
+              const stroke = isLowLife ? "hsl(var(--status-amber))" : "hsl(var(--status-green))";
+              const isActive = hoveredAc === ac.aircraftId;
+              const points = lifeSeries
+                .map((d) => `${xScale(d.t)},${yScale(d[ac.aircraftId] ?? ac.currentLife)}`)
+                .join(" ");
+              const labelX = xScale(24);
+              const labelY = labelYMap[ac.aircraftId] ?? yScale(ac.currentLife);
+              return (
+                <g key={`life-${ac.aircraftId}`}>
+                  <polyline
+                    points={points}
+                    fill="none"
+                    stroke={stroke}
+                    strokeWidth={isActive ? 3.2 : 2.5}
+                    strokeLinecap="butt"
+                    strokeLinejoin="miter"
+                    opacity={isActive ? 1 : hoveredAc ? 0.35 : 0.85}
+                  />
+                  <text x={labelX} y={labelY - 4 - (i % 3) * 2} textAnchor="end" fontSize="7" fill="rgba(226,232,240,0.85)" fontFamily="monospace">
+                    {ac.aircraftId}
+                  </text>
+                  <title>{`Flygplan: ${ac.aircraftId} | Kvarvarande liv: ${Math.round(labelValueMap[ac.aircraftId] ?? ac.currentLife)} h`}</title>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+        <div className="flex items-center gap-3 pt-2 text-[8px] font-mono text-muted-foreground">
+          <span>Mission = diagonal nedåt</span>
+          <span>Ground = horisontell</span>
+          <span>Service slut = hopp till 100</span>
+          <span className="ml-2"><span className="text-red-500">—</span> Underhåll</span>
+          <span><span className="text-blue-500">—</span> På uppdrag</span>
+          <span><span className="text-green-500">—</span> Klar</span>
+        </div>
       </div>
     </div>
   );
