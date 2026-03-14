@@ -75,13 +75,21 @@ const AC_LABEL: Record<string, string> = {
   unavailable: "NMC",
 };
 
-// Plane silhouette color = remaining-life battery indicator
+// Plane silhouette color based on health %
 function getAircraftColor(ac: Aircraft): string {
   if (ac.status === "under_maintenance") return "#D7AB3A";
   if (ac.status === "unavailable") return "#D9192E";
-  if (ac.hoursToService <= 20) return "#D9192E";
-  if (ac.hoursToService < 50) return "#D7AB3A";
-  return "#0C234C";
+  const h = ac.health ?? 100;
+  if (h <= 20) return "#CC2222";          // deep red — NMC / critical
+  if (h <= 50) return "#E07800";          // warm orange — degraded
+  return "#0C234C";                        // blue — operational
+}
+
+// Health color for text/bar display — readable against light background
+function getHealthColor(health: number): string {
+  if (health <= 20) return "#CC2222";   // deep red
+  if (health <= 50) return "#E07800";   // warm orange (readable)
+  return "#33C45A";                      // deep green (not neon)
 }
 
 // Aircraft image using Jase_transparent.png, tinted by status color, centered at (cx,cy)
@@ -161,7 +169,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
   // Apron shows only parked planes (MC and NMC). On-mission → runway. Maintenance → hangars.
   const apronAircraft = base.aircraft
     .filter((a) => a.status === "ready" || a.status === "unavailable")
-    .slice(0, 16);
+    .slice(0, 32);
   const cols = 16;
 
   return (
@@ -282,7 +290,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
                 {isSelAc && (
                   <ellipse cx={cx} cy={cy} rx="20" ry="15" fill="none" stroke="#D7AB3A" strokeWidth="1.5" strokeDasharray="3 2" />
                 )}
-                {/* Label */}
+                {/* Tail label */}
                 <rect x={cx - 22} y={cy - 35} width="44" height="13" rx="2"
                   fill={color === "#0C234C" ? "#0C234C" : "#fff"} fillOpacity="0.92"
                   stroke={color} strokeWidth="0.8" />
@@ -291,29 +299,23 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
                   {ac.tailNumber}
                 </text>
                 <AircraftImage cx={cx} cy={cy} color={color} />
-                {/* Battery tooltip on hover */}
-                {hoveredAc === ac.id && (
-                  <g style={{ pointerEvents: "none" }}>
-                    {(() => {
-                      const battPct = Math.min(1, ac.hoursToService / 100);
-                      const battColor = ac.hoursToService <= 20 ? "#D9192E" : ac.hoursToService < 50 ? "#D7AB3A" : "#0C234C";
-                      const bX = cx - 18, bY = cy + 23, bW = 36, bH = 6;
-                      return (
-                        <>
-                          <rect x={bX - 2} y={bY - 2} width={bW + 26} height={bH + 4} rx="3"
-                            fill="#0C234C" fillOpacity="0.85" />
-                          <rect x={bX} y={bY} width={bW} height={bH} rx={1.5}
-                            fill="rgba(255,255,255,0.4)" stroke="#D7DEE1" strokeWidth={0.5} />
-                          <rect x={bX + 1} y={bY + 1} width={Math.max(0, (bW - 2) * battPct)} height={bH - 2}
-                            rx={1} fill={battColor} />
-                          <text x={bX + bW + 4} y={bY + bH - 1} fontSize="6" fill="#D7DEE1" fontFamily="monospace">
-                            {ac.hoursToService}h
-                          </text>
-                        </>
-                      );
-                    })()}
-                  </g>
-                )}
+                {/* Health % bar (always visible) */}
+                {(() => {
+                  const hp = ac.health ?? 100;
+                  const hColor = getHealthColor(hp);
+                  const bX = cx - 18, bY = cy + 23, bW = 36, bH = 6;
+                  return (
+                    <g>
+                      <rect x={bX} y={bY} width={bW} height={bH} rx={1.5}
+                        fill="rgba(0,0,0,0.55)" stroke="#333" strokeWidth={0.5} />
+                      <rect x={bX + 1} y={bY + 1} width={Math.max(0, (bW - 2) * (hp / 100))} height={bH - 2}
+                        rx={1} fill={hColor} />
+                      <text x={cx} y={bY + bH + 8} textAnchor="middle" fontSize="7" fill={hColor} fontFamily="monospace" fontWeight="bold">
+                        {hp}%
+                      </text>
+                    </g>
+                  );
+                })()}
               </g>
             );
           })}
