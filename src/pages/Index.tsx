@@ -19,6 +19,7 @@ import { RunwayCheckModal } from "@/components/game/RunwayCheckModal";
 import { MaintenanceConfirmModal } from "@/components/game/MaintenanceConfirmModal";
 import { HangarFullModal } from "@/components/game/HangarFullModal";
 import { LastBayWarningModal } from "@/components/game/LastBayWarningModal";
+import { SparePartsPickerModal } from "@/components/game/SparePartsPickerModal";
 import { toast } from "sonner";
 import { BaseType } from "@/types/game";
 import { ShieldCheck, Crosshair, Hammer, Users, Siren, Clock, MapPin, PlaneTakeoff } from "lucide-react";
@@ -31,6 +32,11 @@ const Index = () => {
   const [redRunwayWarning, setRedRunwayWarning] = useState<string | null>(null);
   const [hangarFullWarning, setHangarFullWarning] = useState<string | null>(null);
   const [lastBayWarning, setLastBayWarning] = useState<string | null>(null);
+  const [sparePartsFullWarning, setSparePartsFullWarning] = useState<string | null>(null);
+  const [sparePartsPickerAircraftId, setSparePartsPickerAircraftId] = useState<string | null>(null);
+  const [pendingUtfallFull, setPendingUtfallFull] = useState<{
+    aircraftId: string; repairTime: number; typeKey: string; weaponLoss: number; label: string;
+  } | null>(null);
 
   const selectedBase = state.bases.find((b) => b.id === selectedBaseId)!;
 
@@ -85,17 +91,13 @@ const Index = () => {
         toast.error(`${tail} är på uppdrag`);
         return;
       }
-      // Pick first available LRU-type spare part (Avionik category preferred, then any with stock)
-      const lruPart = selectedBase.spareParts.find((p) => p.quantity > 0 && p.category === "Avionik")
-        ?? selectedBase.spareParts.find((p) => p.quantity > 0);
-      if (!lruPart) {
-        toast.error(`Inga reservdelar kvar vid ${selectedBase.name} — LRU-rep ej möjlig`);
+      // LRU repair requires a free maintenance bay — block if all occupied
+      if (selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) {
+        setSparePartsFullWarning(aircraftId);
         return;
       }
-      // Consume 1 part and start quick repair
-      consumeSparePart(selectedBaseId, lruPart.id, 1);
-      applyUtfallOutcome(selectedBaseId, aircraftId, 2, "quick_lru", 10, `Quick LRU replacement (${lruPart.name})`);
-      toast.success(`${tail} → Snabb LRU-reparation 2h — använder ${lruPart.name} (kvar: ${lruPart.quantity - 1})`);
+      // Open part picker — let user choose which component to replace
+      setSparePartsPickerAircraftId(aircraftId);
 
     } else if (zone === "fuel") {
       if (aircraft.status === "on_mission") {
@@ -246,7 +248,11 @@ const Index = () => {
               base={selectedBase}
               onDropAircraft={handleDropAircraft}
               onUtfallOutcome={(aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel) => {
-                applyUtfallOutcome(selectedBaseId, aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel);
+                if (repairTime > 0 && selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) {
+                  setPendingUtfallFull({ aircraftId, repairTime, typeKey: maintenanceTypeKey, weaponLoss, label: actionLabel });
+                } else {
+                  applyUtfallOutcome(selectedBaseId, aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel);
+                }
               }}
             />
           </div>
@@ -373,9 +379,13 @@ const Index = () => {
             toast.success(`✈️ ${runwayAircraft.tailNumber} lyfter! Uppdrag ${durationHours}h`);
           }}
           onMaintenance={(repairTime, typeKey, weaponLoss, label) => {
-            applyUtfallOutcome(selectedBaseId, pendingRunwayCheck, repairTime, typeKey, weaponLoss, label);
             setPendingRunwayCheck(null);
-            toast.error(`🔧 ${runwayAircraft.tailNumber} → Service: ${label} (${repairTime}h)`);
+            if (selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) {
+              setPendingUtfallFull({ aircraftId: pendingRunwayCheck, repairTime, typeKey, weaponLoss, label });
+            } else {
+              applyUtfallOutcome(selectedBaseId, pendingRunwayCheck, repairTime, typeKey, weaponLoss, label);
+              toast.error(`${runwayAircraft.tailNumber} → Service: ${label} (${repairTime}h)`);
+            }
           }}
           onIgnoreFault={(repairTime, typeKey, actionLabel) => {
             markFaultNMC(selectedBaseId, pendingRunwayCheck, repairTime, typeKey, actionLabel);
@@ -483,6 +493,85 @@ const Index = () => {
               toast.info(`⏸ Underhåll pausat på ${pauseId} — ${incoming.tailNumber} köas`);
             }}
             onIgnore={() => setHangarFullWarning(null)}
+          />
+        );
+      })()}
+
+      {/* Spareparts zone — bays full modal */}
+      {sparePartsFullWarning && (() => {
+        const incoming = selectedBase.aircraft.find((a) => a.id === sparePartsFullWarning);
+        const inMaint = selectedBase.aircraft.filter((a) => a.status === "under_maintenance");
+        if (!incoming) return null;
+        return (
+          <HangarFullModal
+            key={`sp-${sparePartsFullWarning}`}
+            incomingAircraft={incoming}
+            maintenanceAircraft={inMaint}
+            baseId={selectedBaseId}
+            onPause={(pauseId) => {
+              pauseMaintenance(selectedBaseId, pauseId);
+              setSparePartsFullWarning(null);
+              // Re-run the LRU repair now that a bay is free
+              const lruPart = selectedBase.spareParts.find((p) => p.quantity > 0 && p.category === "Avionik")
+                ?? selectedBase.spareParts.find((p) => p.quantity > 0);
+              if (!lruPart) {
+                toast.error(`Inga reservdelar kvar — LRU-rep ej möjlig`);
+                return;
+              }
+              consumeSparePart(selectedBaseId, lruPart.id, 1);
+              applyUtfallOutcome(selectedBaseId, incoming.id, 2, "quick_lru", 10, `Quick LRU replacement (${lruPart.name})`);
+              toast.success(`${incoming.tailNumber} → LRU-reparation 2h — ${lruPart.name} använd`);
+              toast.info(`Underhåll pausat på ${pauseId} — plats frigjord`);
+            }}
+            onIgnore={() => setSparePartsFullWarning(null)}
+          />
+        );
+      })()}
+
+      {/* Spare Parts Picker Modal */}
+      {sparePartsPickerAircraftId && (() => {
+        const ac = selectedBase.aircraft.find((a) => a.id === sparePartsPickerAircraftId);
+        if (!ac) return null;
+        return (
+          <SparePartsPickerModal
+            key={sparePartsPickerAircraftId}
+            aircraft={ac}
+            spareParts={selectedBase.spareParts}
+            onSelect={(partId, partName) => {
+              consumeSparePart(selectedBaseId, partId, 1);
+              applyUtfallOutcome(selectedBaseId, ac.id, 2, "quick_lru", 10, `Quick LRU replacement (${partName})`);
+              const remaining = (selectedBase.spareParts.find((p) => p.id === partId)?.quantity ?? 1) - 1;
+              toast.success(`${ac.tailNumber} → LRU-reparation 2h — ${partName} använd (kvar: ${remaining})`);
+              setSparePartsPickerAircraftId(null);
+            }}
+            onClose={() => setSparePartsPickerAircraftId(null)}
+          />
+        );
+      })()}
+
+      {/* Utfall → bays full: must free a bay before entering service */}
+      {pendingUtfallFull && (() => {
+        const incoming = selectedBase.aircraft.find((a) => a.id === pendingUtfallFull.aircraftId);
+        const inMaint = selectedBase.aircraft.filter((a) => a.status === "under_maintenance");
+        if (!incoming) return null;
+        return (
+          <HangarFullModal
+            key={`utfall-full-${pendingUtfallFull.aircraftId}`}
+            incomingAircraft={incoming}
+            maintenanceAircraft={inMaint}
+            baseId={selectedBaseId}
+            onPause={(pauseId) => {
+              pauseMaintenance(selectedBaseId, pauseId);
+              applyUtfallOutcome(selectedBaseId, pendingUtfallFull.aircraftId, pendingUtfallFull.repairTime, pendingUtfallFull.typeKey, pendingUtfallFull.weaponLoss, pendingUtfallFull.label);
+              toast.error(`${incoming.tailNumber} → Service: ${pendingUtfallFull.label} (${pendingUtfallFull.repairTime}h)`);
+              toast.info(`Underhåll pausat på ${pauseId} — plats frigjord`);
+              setPendingUtfallFull(null);
+            }}
+            onIgnore={() => {
+              markFaultNMC(selectedBaseId, pendingUtfallFull.aircraftId, pendingUtfallFull.repairTime, pendingUtfallFull.typeKey, pendingUtfallFull.label);
+              toast.warning(`${incoming.tailNumber} NMC — felet registrerat, väntar på hangarplats`);
+              setPendingUtfallFull(null);
+            }}
           />
         );
       })()}

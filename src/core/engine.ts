@@ -310,9 +310,17 @@ function handleApplyUtfall(
       };
     });
     const maintCount = aircraft.filter((a) => a.status === "under_maintenance").length;
+    // Deduct crew when aircraft enters maintenance (same as hangarDropConfirm)
+    const personnel = repairTime > 0
+      ? base.personnel.map((p) => ({
+          ...p,
+          available: Math.max(0, p.available - (MAINTENANCE_CREW_PER_AIRCRAFT[p.id] ?? 0)),
+        }))
+      : base.personnel;
     return {
       ...base,
       aircraft,
+      personnel,
       maintenanceBays: { ...base.maintenanceBays, occupied: Math.min(maintCount, base.maintenanceBays.total) },
     };
   });

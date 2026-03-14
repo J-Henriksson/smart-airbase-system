@@ -39,7 +39,7 @@ const SVG_ZONES: {
 }[] = [
   { id: "runway",     x: 60,  y: 148, w: 780, h: 62,  label: "STARTA UPPDRAG",    colorFill: "rgba(215,171,58,0.30)",  colorBorder: "#D7AB3A" },
   { id: "hangar",     x: 55,  y: 313, w: 343, h: 125, label: "UNDERHALL / SERVICE", colorFill: "rgba(12,35,76,0.30)",    colorBorder: "#0C234C" },
-  { id: "spareparts", x: 200, y: 40,  w: 130, h: 70,  label: "SNABB LRU-REP",      colorFill: "rgba(217,25,46,0.25)",   colorBorder: "#D9192E" },
+  { id: "spareparts", x: 200, y: 40,  w: 130, h: 70,  label: "BYTA KOMPONENT",      colorFill: "rgba(217,25,46,0.25)",   colorBorder: "#D9192E" },
   { id: "fuel",       x: 432, y: 372, w: 110, h: 72,  label: "TANKNING",            colorFill: "rgba(12,35,76,0.25)",    colorBorder: "#0C234C" },
   { id: "ammo",       x: 430, y: 318, w: 130, h: 40,  label: "BEVÄPNING",           colorFill: "rgba(217,25,46,0.25)",   colorBorder: "#D9192E" },
 ];
@@ -204,7 +204,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
           {/* Drag-drop instructions banner */}
           <rect x="20" y="8" width="860" height="22" rx="3" fill="#0C234C" opacity="0.92" />
           <text x="30" y="22" fontSize="9" fill="#D7AB3A" fontFamily="monospace" fontWeight="bold">
-            Dra flygplan → Bana (uppdrag) · Hangar (underhall) · Reservdel (LRU 2h) · Bränsle · Ammo
+            Dra flygplan → Bana (uppdrag) · Hangar (underhall) · Reservdel (byta komponent) · Bränsle · Ammo
           </text>
 
           {/* ── Perimeter fence */}
