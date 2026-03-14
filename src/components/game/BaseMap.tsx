@@ -86,47 +86,17 @@ function getAircraftColor(ac: Aircraft): string {
   return "#0C234C";
 }
 
-// Reusable Gripen top-down silhouette, facing LEFT (nose at cx-x), centered at (cx,cy)
-function GripenShape({ cx, cy, color, opacity = 1 }: { cx: number; cy: number; color: string; opacity?: number }) {
+// Aircraft image using Jase_transparent.png, tinted by status color, centered at (cx,cy)
+function AircraftImage({ cx, cy, color = "#0C234C", opacity = 1 }: { cx: number; cy: number; color?: string; opacity?: number }) {
+  const filterId = `tint-${color.replace('#', '')}`;
   return (
-    <g opacity={opacity}>
-      {/* Main fuselage — long needle shape */}
-      <path
-        d={`M ${cx-15},${cy}
-            L ${cx-11},${cy-2}
-            L ${cx-6},${cy-2.5}
-            L ${cx+1},${cy-2}
-            L ${cx+11},${cy-1.5}
-            L ${cx+14},${cy}
-            L ${cx+11},${cy+1.5}
-            L ${cx+1},${cy+2}
-            L ${cx-6},${cy+2.5}
-            L ${cx-11},${cy+2} Z`}
-        fill={color}
-      />
-      {/* Left main delta wing — sweeps back from mid-fuselage */}
-      <polygon
-        points={`${cx-4},${cy-2} ${cx-1},${cy-14} ${cx+8},${cy-13} ${cx+10},${cy-2}`}
-        fill={color} opacity="0.9"
-      />
-      {/* Right main delta wing */}
-      <polygon
-        points={`${cx-4},${cy+2} ${cx-1},${cy+14} ${cx+8},${cy+13} ${cx+10},${cy+2}`}
-        fill={color} opacity="0.9"
-      />
-      {/* Left forward canard — sweeps forward */}
-      <polygon
-        points={`${cx-9},${cy-2} ${cx-13},${cy-6} ${cx-8},${cy-5} ${cx-7},${cy-2}`}
-        fill={color} opacity="0.85"
-      />
-      {/* Right forward canard */}
-      <polygon
-        points={`${cx-9},${cy+2} ${cx-13},${cy+6} ${cx-8},${cy+5} ${cx-7},${cy+2}`}
-        fill={color} opacity="0.85"
-      />
-      {/* Engine nozzle circle at tail */}
-      <circle cx={cx+14} cy={cy} r="2.5" fill={color} opacity="0.65" />
-    </g>
+    <image
+      href="/Jase_transparent.png"
+      x={cx - 18} y={cy - 14}
+      width="36" height="28"
+      opacity={opacity}
+      filter={`url(#${filterId})`}
+    />
   );
 }
 
@@ -193,7 +163,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
   // Apron shows only parked planes (MC and NMC). On-mission → runway. Maintenance → hangars.
   const apronAircraft = base.aircraft
     .filter((a) => a.status === "ready" || a.status === "unavailable")
-    .slice(0, 32);
+    .slice(0, 16);
   const cols = 16;
 
   return (
@@ -219,6 +189,12 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
               <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#0C234C" strokeWidth="0.3" opacity="0.15" />
             </pattern>
+            {["0C234C","D7AB3A","D9192E","1a4a8a","5a3a8a","8a6a1a","2a7a5a","1a5a7a","8a5a2a"].map((hex) => (
+              <filter key={hex} id={`tint-${hex}`}>
+                <feFlood floodColor={`#${hex}`} result="c" />
+                <feComposite in="c" in2="SourceAlpha" operator="in" />
+              </filter>
+            ))}
           </defs>
           <rect width="900" height="500" fill="url(#grid)" />
 
@@ -239,9 +215,6 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
           {/* ── Runway ── */}
           {/* Asphalt base */}
           <rect x="60" y="148" width="780" height="62" rx="3" fill="#5a6070" />
-          {/* Runway edge stripes */}
-          <rect x="60" y="148" width="780" height="4" rx="2" fill="#D7AB3A" opacity="0.6" />
-          <rect x="60" y="206" width="780" height="4" rx="2" fill="#D7AB3A" opacity="0.6" />
           {/* Centre-line */}
           <line x1="60" y1="179" x2="840" y2="179" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="22 12" opacity="0.9" />
           {/* Threshold marks - left */}
@@ -288,7 +261,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
             const col = i % cols;
             const row = Math.floor(i / cols);
             const cx = 80 + col * 46;
-            const cy = 248 + row * 44;
+            const cy = 258 + row * 44;
             const color = getAircraftColor(ac);
             const isSelAc = selectedAcId === ac.id;
             return (
@@ -312,8 +285,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
                 {isSelAc && (
                   <ellipse cx={cx} cy={cy} rx="16" ry="12" fill="none" stroke="#D7AB3A" strokeWidth="1.5" strokeDasharray="3 2" />
                 )}
-                <ellipse cx={cx} cy={cy + 1.5} rx="13" ry="5" fill="rgba(0,0,0,0.10)" />
-                <GripenShape cx={cx} cy={cy} color={color} />
+                <AircraftImage cx={cx} cy={cy} color={color} />
                 {/* Battery bar */}
                 {(() => {
                   const battPct = Math.min(1, ac.hoursToService / 100);
@@ -389,7 +361,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
               <g key={`maint-${ac.id}`}
                 onMouseEnter={() => setHoveredAc(ac.id)}
                 onMouseLeave={() => setHoveredAc(null)}>
-                <GripenShape cx={mx} cy={my} color="#D7AB3A" opacity={0.75} />
+                <AircraftImage cx={mx} cy={my} color="#D7AB3A" opacity={0.75} />
                 {hoveredAc === ac.id && (
                   <g>
                     <rect x={mx-18} y={my-20} width="36" height="11" rx="2" fill="#0C234C" opacity="0.95" />
@@ -484,14 +456,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
                       onMouseEnter={() => setHoveredAc(ac.id)}
                       onMouseLeave={() => setHoveredAc(null)}
                     >
-                      <GripenShape cx={cx} cy={cy} color={color} opacity={isRet ? 0.7 : 1} />
-                      {/* Speed lines (not for returning) */}
-                      {!isRet && (
-                        <>
-                          <line x1={cx+15} y1={cy-1} x2={cx+24} y2={cy-1} stroke="#D7AB3A" strokeWidth="0.8" opacity="0.7" />
-                          <line x1={cx+15} y1={cy+1} x2={cx+24} y2={cy+1} stroke="#D7AB3A" strokeWidth="0.8" opacity="0.7" />
-                        </>
-                      )}
+                      <AircraftImage cx={cx} cy={cy} color={color} opacity={isRet ? 0.7 : 1} />
                       {/* Returning indicator */}
                       {isRet && (
                         <text x={cx} y={cy - 18} textAnchor="middle" fontSize="7" fill="#aa88ff" fontFamily="monospace">↩</text>
@@ -659,8 +624,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
             const gx = dragPos.x, gy = dragPos.y;
             return (
               <g opacity="0.8" style={{ pointerEvents: "none" }}>
-                <ellipse cx={gx} cy={gy + 1.5} rx="14" ry="6" fill="rgba(0,0,0,0.2)" />
-                <GripenShape cx={gx} cy={gy} color={gc} />
+                <AircraftImage cx={gx} cy={gy} color={gc} />
                 {/* Tail number label on ghost */}
                 <rect x={gx-16} y={gy-28} width="32" height="10" rx="2" fill={gc} opacity="0.9" />
                 <text x={gx} y={gy-21} textAnchor="middle" fontSize="7" fill="white" fontFamily="monospace" fontWeight="bold">
@@ -678,7 +642,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome }: BaseMapProps)
             const col = acIdx % cols;
             const row = Math.floor(acIdx / cols);
             const cx = 80 + col * 46;
-            const cy = 248 + row * 44;
+            const cy = 258 + row * 44;
 
             const pw = 195, ph = 225;
             const acColor = getAircraftColor(ac);
