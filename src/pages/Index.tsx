@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useGame } from "@/context/GameContext";
 import { TopBar } from "@/components/game/TopBar";
 import { MissionSchedule } from "@/components/game/MissionSchedule";
-import { AircraftPipeline } from "@/components/game/AircraftPipeline";
 import { MaintenanceBays } from "@/components/game/MaintenanceBays";
 import { TurnPhaseTracker } from "@/components/game/TurnPhaseTracker";
 import { PhasePanel } from "@/components/game/PhasePanel";
@@ -118,19 +117,6 @@ const Index = () => {
   const kritiskaResurser = selectedBase.spareParts.filter((p) => p.quantity / p.maxQuantity < 0.3).length +
     selectedBase.ammunition.filter((a) => a.quantity / a.max < 0.3).length;
 
-  const handleStartMaintenance = (aircraftId: string) => {
-    if (selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) {
-      toast.error("Alla underhållsplatser är upptagna!");
-      return;
-    }
-    startMaintenance(selectedBaseId, aircraftId);
-    toast.success(`Underhåll påbörjat på ${aircraftId}`);
-  };
-
-  const handleSendMission = (aircraftId: string) => {
-    sendOnMission(selectedBaseId, aircraftId, "DCA");
-    toast.success(`${aircraftId} skickad på DCA-uppdrag`);
-  };
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("sv-SE", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -318,13 +304,7 @@ const Index = () => {
           {/* ROW 6: Uppdragsschema (Gantt) */}
           <MissionSchedule atoOrders={state.atoOrders} day={state.day} hour={state.hour} />
 
-          {/* ROW 7: Aircraft Pipeline + Maintenance */}
-          <AircraftPipeline
-            base={selectedBase}
-            onStartMaintenance={handleStartMaintenance}
-            onSendMission={handleSendMission}
-          />
-
+          {/* ROW 7: Maintenance + Remaining Life */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <MaintenanceBays base={selectedBase} onDropAircraft={handleDropAircraft} />
             {/* Remaining Life */}
@@ -340,12 +320,12 @@ const Index = () => {
                 <div className="flex items-center gap-2">
                   <PlaneTakeoff className="h-4 w-4" style={{ color: "hsl(220 63% 30%)" }} />
                   <h3 className="font-sans font-bold text-sm" style={{ color: "hsl(220 63% 18%)" }}>
-                    REMAINING LIFE & SERVICE
+                    REMAINING LIFE & SERVICE — {selectedBase.name}
                   </h3>
                 </div>
               </div>
               <div className="p-4">
-                <RemainingLifeGraf bases={state.bases} phase={state.phase} />
+                <RemainingLifeGraf bases={[selectedBase]} phase={state.phase} />
               </div>
             </div>
           </div>
