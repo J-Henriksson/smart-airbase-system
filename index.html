@@ -10,6 +10,17 @@
     <meta property="og:title" content="ROAD2AIR" />
     <meta property="og:description" content="ROAD2AIR — Tactical Air Base Management" />
     <meta property="og:type" content="website" />
+    <!-- GitHub Pages SPA redirect: decode the path encoded by 404.html -->
+    <script>
+      (function() {
+        var redirect = sessionStorage.getItem('spa-redirect');
+        if (redirect) {
+          sessionStorage.removeItem('spa-redirect');
+          var url = new URL(redirect);
+          window.history.replaceState(null, null, url.pathname + url.search + url.hash);
+        }
+      })();
+    </script>
   </head>
 
   <body>
