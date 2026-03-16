@@ -12,25 +12,27 @@ export interface UtfallOutcome {
   facility: FacilityType;
   capability: CapabilityLevel;
   description: string;
+  /** Spare part ID to consume when aircraft enters maintenance (undefined = labour only) */
+  requiredSparePart?: string;
 }
 
 /** Table A: Loading/fueling/startup BIT outcomes */
 export const UTFALL_TABLE_A: UtfallOutcome[] = [
-  { roll: 1, faultType: "quick_lru",       repairTime: 2,  facility: "service_bay",     capability: "AU_steg_1",   description: "Quick LRU replacement (AU Steg 1)" },
-  { roll: 2, faultType: "quick_lru",       repairTime: 2,  facility: "minor_workshop",  capability: "AU_steg_2_3", description: "Quick LRU replacement (AU Steg 2/3)" },
-  { roll: 3, faultType: "complex_lru",     repairTime: 6,  facility: "major_workshop",  capability: "AU_steg_4",   description: "Complex LRU replacement (AU Steg 4)" },
-  { roll: 4, faultType: "direct_repair",   repairTime: 16, facility: "major_workshop",  capability: "kompositrep", description: "Direct repair (Kompositrep)" },
+  { roll: 1, faultType: "quick_lru",       repairTime: 2,  facility: "service_bay",     capability: "AU_steg_1",   description: "Quick LRU replacement (AU Steg 1)",    requiredSparePart: "computer"  },
+  { roll: 2, faultType: "quick_lru",       repairTime: 2,  facility: "minor_workshop",  capability: "AU_steg_2_3", description: "Quick LRU replacement (AU Steg 2/3)",  requiredSparePart: "computer"  },
+  { roll: 3, faultType: "complex_lru",     repairTime: 6,  facility: "major_workshop",  capability: "AU_steg_4",   description: "Complex LRU replacement (AU Steg 4)",  requiredSparePart: "radar"     },
+  { roll: 4, faultType: "direct_repair",   repairTime: 16, facility: "major_workshop",  capability: "kompositrep", description: "Direct repair (Kompositrep)",           requiredSparePart: "hydraulic" },
   { roll: 5, faultType: "troubleshooting", repairTime: 4,  facility: "service_bay",     capability: "FK_steg_1_3", description: "Felsökning liten (FK Steg 1-3)" },
   { roll: 6, faultType: "troubleshooting", repairTime: 4,  facility: "service_bay",     capability: "FK_steg_1_3", description: "Felsökning liten (FK Steg 1-3)" },
 ];
 
 /** Table B: Reception/post-mission outcomes */
 export const UTFALL_TABLE_B: UtfallOutcome[] = [
-  { roll: 1, faultType: "quick_lru",       repairTime: 2,  facility: "service_bay",     capability: "hjulbyte",    description: "Hjulbyte efter landning" },
-  { roll: 2, faultType: "quick_lru",       repairTime: 2,  facility: "service_bay",     capability: "AU_steg_1",   description: "LRU-byte, sensorfel" },
-  { roll: 3, faultType: "direct_repair",   repairTime: 6,  facility: "minor_workshop",  capability: "FK_steg_1_3", description: "Direkt reparation, structural" },
+  { roll: 1, faultType: "quick_lru",       repairTime: 2,  facility: "service_bay",     capability: "hjulbyte",    description: "Hjulbyte efter landning",    requiredSparePart: "wheel"     },
+  { roll: 2, faultType: "quick_lru",       repairTime: 2,  facility: "service_bay",     capability: "AU_steg_1",   description: "LRU-byte, sensorfel",        requiredSparePart: "radar"     },
+  { roll: 3, faultType: "direct_repair",   repairTime: 6,  facility: "minor_workshop",  capability: "FK_steg_1_3", description: "Direkt reparation, structural", requiredSparePart: "hydraulic" },
   { roll: 4, faultType: "troubleshooting", repairTime: 16, facility: "major_workshop",  capability: "AU_steg_4",   description: "Omfattande felsökning" },
-  { roll: 5, faultType: "complex_lru",     repairTime: 4,  facility: "minor_workshop",  capability: "AU_steg_2_3", description: "Komplex LRU-byte" },
+  { roll: 5, faultType: "complex_lru",     repairTime: 4,  facility: "minor_workshop",  capability: "AU_steg_2_3", description: "Komplex LRU-byte",           requiredSparePart: "radar"     },
   { roll: 6, faultType: "troubleshooting", repairTime: 4,  facility: "service_bay",     capability: "FK_steg_1_3", description: "Felsökning, EW-system" },
 ];
 

@@ -34,7 +34,7 @@ const Index = () => {
   const [sparePartsFullWarning, setSparePartsFullWarning] = useState<string | null>(null);
   const [sparePartsPickerAircraftId, setSparePartsPickerAircraftId] = useState<string | null>(null);
   const [pendingUtfallFull, setPendingUtfallFull] = useState<{
-    aircraftId: string; repairTime: number; typeKey: string; weaponLoss: number; label: string;
+    aircraftId: string; repairTime: number; typeKey: string; weaponLoss: number; label: string; requiredSparePart?: string;
   } | null>(null);
 
   const selectedBase = state.bases.find((b) => b.id === selectedBaseId)!;
@@ -275,11 +275,11 @@ const Index = () => {
               onDropAircraft={handleDropAircraft}
               overdueAircraftIds={overdueAircraftIds}
               overdueMissionLabels={overdueMissionLabels}
-              onUtfallOutcome={(aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel) => {
+              onUtfallOutcome={(aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel, requiredSparePart) => {
                 if (repairTime > 0 && selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) {
-                  setPendingUtfallFull({ aircraftId, repairTime, typeKey: maintenanceTypeKey, weaponLoss, label: actionLabel });
+                  setPendingUtfallFull({ aircraftId, repairTime, typeKey: maintenanceTypeKey, weaponLoss, label: actionLabel, requiredSparePart });
                 } else {
-                  applyUtfallOutcome(selectedBaseId, aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel);
+                  applyUtfallOutcome(selectedBaseId, aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel, requiredSparePart);
                 }
               }}
             />
@@ -400,17 +400,17 @@ const Index = () => {
             setPendingRunwayCheck(null);
             toast.success(`✈️ ${runwayAircraft.tailNumber} lyfter! Uppdrag ${durationHours}h`);
           }}
-          onMaintenance={(repairTime, typeKey, weaponLoss, label) => {
+          onMaintenance={(repairTime, typeKey, weaponLoss, label, requiredSparePart) => {
             setPendingRunwayCheck(null);
             if (selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) {
-              setPendingUtfallFull({ aircraftId: pendingRunwayCheck, repairTime, typeKey, weaponLoss, label });
+              setPendingUtfallFull({ aircraftId: pendingRunwayCheck, repairTime, typeKey, weaponLoss, label, requiredSparePart });
             } else {
-              applyUtfallOutcome(selectedBaseId, pendingRunwayCheck, repairTime, typeKey, weaponLoss, label);
+              applyUtfallOutcome(selectedBaseId, pendingRunwayCheck, repairTime, typeKey, weaponLoss, label, requiredSparePart);
               toast.error(`${runwayAircraft.tailNumber} → Service: ${label} (${repairTime}h)`);
             }
           }}
-          onIgnoreFault={(repairTime, typeKey, actionLabel) => {
-            markFaultNMC(selectedBaseId, pendingRunwayCheck, repairTime, typeKey, actionLabel);
+          onIgnoreFault={(repairTime, typeKey, actionLabel, requiredSparePart) => {
+            markFaultNMC(selectedBaseId, pendingRunwayCheck, repairTime, typeKey, actionLabel, requiredSparePart);
             setPendingRunwayCheck(null);
             toast.warning(`🔴 ${runwayAircraft.tailNumber} NMC — fel ignorerat, ej i hangar`);
           }}
@@ -584,7 +584,7 @@ const Index = () => {
             baseId={selectedBaseId}
             onPause={(pauseId) => {
               pauseMaintenance(selectedBaseId, pauseId);
-              applyUtfallOutcome(selectedBaseId, pendingUtfallFull.aircraftId, pendingUtfallFull.repairTime, pendingUtfallFull.typeKey, pendingUtfallFull.weaponLoss, pendingUtfallFull.label);
+              applyUtfallOutcome(selectedBaseId, pendingUtfallFull.aircraftId, pendingUtfallFull.repairTime, pendingUtfallFull.typeKey, pendingUtfallFull.weaponLoss, pendingUtfallFull.label, pendingUtfallFull.requiredSparePart);
               toast.error(`${incoming.tailNumber} → Service: ${pendingUtfallFull.label} (${pendingUtfallFull.repairTime}h)`);
               toast.info(`Underhåll pausat på ${pauseId} — plats frigjord`);
               setPendingUtfallFull(null);

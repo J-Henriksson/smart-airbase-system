@@ -11,8 +11,8 @@ interface Props {
   aircraft: Aircraft;
   maintenanceBays: { occupied: number; total: number };
   onMission: (durationHours: number) => void;
-  onMaintenance: (repairTime: number, typeKey: string, weaponLoss: number, label: string) => void;
-  onIgnoreFault: (repairTime: number, typeKey: string, actionLabel: string) => void;
+  onMaintenance: (repairTime: number, typeKey: string, weaponLoss: number, label: string, requiredSparePart?: string) => void;
+  onIgnoreFault: (repairTime: number, typeKey: string, actionLabel: string, requiredSparePart?: string) => void;
   onClose: () => void;
 }
 
@@ -122,7 +122,7 @@ export function RunwayCheckModal({ aircraft, maintenanceBays, onMission, onMaint
 
   const handleSendToService = () => {
     if (!faultOutcome) return;
-    onMaintenance(faultEffectiveTime, faultOutcome.faultType, faultWeaponLoss, faultOutcome.description);
+    onMaintenance(faultEffectiveTime, faultOutcome.faultType, faultWeaponLoss, faultOutcome.description, faultOutcome.requiredSparePart);
   };
 
   const canClose = phase === "missionTime";
@@ -304,7 +304,7 @@ export function RunwayCheckModal({ aircraft, maintenanceBays, onMission, onMaint
                 {(() => { const rec = getFaultRec(maintenanceBays, faultEffectiveTime); return <ContextualRecommendation text={rec.text} type={rec.type} />; })()}
                 <div className="flex gap-3">
                   <button
-                    onClick={() => onIgnoreFault(faultEffectiveTime, faultOutcome.faultType, faultOutcome.description)}
+                    onClick={() => onIgnoreFault(faultEffectiveTime, faultOutcome.faultType, faultOutcome.description, faultOutcome.requiredSparePart)}
                     className="px-5 py-3 rounded-xl font-mono font-bold text-sm transition-all hover:brightness-110 active:scale-95"
                     style={{ background: "#2a1a1a", border: "1px solid #5566aa", color: "#8899cc" }}
                   >

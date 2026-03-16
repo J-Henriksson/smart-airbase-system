@@ -56,6 +56,7 @@ interface UtfallModalProps {
     maintenanceTypeKey: string;
     weaponLoss: number;
     actionLabel: string;
+    requiredSparePart?: string;
   }) => void;
 }
 
@@ -110,11 +111,13 @@ export function UtfallModal({ aircraft, context = "prep", onClose, onAccept }: U
     let repairTime = effectiveRepairTime;
     let maintenanceTypeKey = outcome.faultType;
     let actionLabel = outcome.description;
+    let requiredSparePart = outcome.requiredSparePart;
 
     if (decisionId === "quickfix") {
       repairTime = 2;
       maintenanceTypeKey = "quick_lru";
       actionLabel = "Snabbfix (Quick LRU)";
+      // quickfix still uses the same part as the original fault
     } else if (decisionId === "groundall") {
       repairTime = 0;
       actionLabel = "Parkerad som NMC";
@@ -126,6 +129,7 @@ export function UtfallModal({ aircraft, context = "prep", onClose, onAccept }: U
       maintenanceTypeKey,
       weaponLoss,
       actionLabel,
+      requiredSparePart,
     }), 400);
   };
 
@@ -137,6 +141,7 @@ export function UtfallModal({ aircraft, context = "prep", onClose, onAccept }: U
       maintenanceTypeKey: outcome.faultType,
       weaponLoss,
       actionLabel: outcome.description,
+      requiredSparePart: outcome.requiredSparePart,
     });
   };
 

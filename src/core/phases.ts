@@ -4,6 +4,7 @@ import { getPhaseForDay } from "@/data/config/scenario";
 import { generateATOOrders } from "@/data/initialGameState";
 import { FUEL_DRAIN_RATE, MAINTENANCE_CREW_PER_AIRCRAFT } from "@/data/config/capacities";
 import { generateRecommendations } from "./recommendations";
+import { uuid } from "./uuid";
 
 /** Handle a specific phase, returning the updated state */
 export function handlePhase(state: GameState): GameState {
@@ -44,7 +45,7 @@ function addEvent(state: GameState, event: Omit<GameEvent, "id" | "timestamp">):
     events: [
       {
         ...event,
-        id: crypto.randomUUID(),
+        id: uuid(),
         timestamp: `Dag ${state.day} ${String(state.hour).padStart(2, "0")}:00`,
       },
       ...state.events,
@@ -146,7 +147,7 @@ function handleUpdateMaintenancePlan(state: GameState): GameState {
         if (remaining <= 0) {
           completedCount++;
           newEvents.push({
-            id: crypto.randomUUID(),
+            id: uuid(),
             timestamp: `Dag ${state.day} ${String(state.hour).padStart(2, "0")}:00`,
             type: "success",
             message: `${ac.tailNumber} underhåll klart — nu operativ`,
@@ -201,7 +202,7 @@ function handleIncrementTime(state: GameState): GameState {
 
   if (nextPhase !== state.phase) {
     newEvents.push({
-      id: crypto.randomUUID(),
+      id: uuid(),
       timestamp: `Dag ${nextDay} ${String(nextHour).padStart(2, "0")}:00`,
       type: "critical",
       message: `Fas ändrad till ${nextPhase}`,
@@ -276,7 +277,7 @@ function handleIncrementTime(state: GameState): GameState {
 
   if (returningAircraft.length > 0) {
     newEvents.push({
-      id: crypto.randomUUID(),
+      id: uuid(),
       timestamp: `Dag ${nextDay} ${String(nextHour).padStart(2, "0")}:00`,
       type: "info" as const,
       message: `${returningAircraft.length} flygplan återvänder — mottagningskontroll krävs`,

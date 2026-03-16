@@ -16,7 +16,7 @@ export interface GameEngine {
   dispatchOrder: (orderId: string) => void;
   moveAircraftToMaintenance: (baseId: string, aircraftId: string) => void;
   sendMissionDrop: (baseId: string, aircraftId: string, missionType?: string, durationHours?: number) => void;
-  applyUtfallOutcome: (baseId: string, aircraftId: string, repairTime: number, maintenanceTypeKey: string, weaponLoss: number, actionLabel: string) => void;
+  applyUtfallOutcome: (baseId: string, aircraftId: string, repairTime: number, maintenanceTypeKey: string, weaponLoss: number, actionLabel: string, requiredSparePart?: string) => void;
   completeLandingCheck: (baseId: string, aircraftId: string, sendToMaintenance: boolean, repairTime?: number, maintenanceTypeKey?: string, weaponLoss?: number, actionLabel?: string) => void;
   resetGame: () => void;
   getResourceSummary: () => string;
@@ -29,7 +29,7 @@ export interface GameEngine {
   dismissRecommendation: (recommendationId: string) => void;
   hangarDropConfirm: (baseId: string, aircraftId: string, repairTime: number, maintenanceTypeKey: string, restoreHealth: boolean) => void;
   pauseMaintenance: (baseId: string, aircraftId: string) => void;
-  markFaultNMC: (baseId: string, aircraftId: string, repairTime: number, maintenanceTypeKey: string, actionLabel: string) => void;
+  markFaultNMC: (baseId: string, aircraftId: string, repairTime: number, maintenanceTypeKey: string, actionLabel: string, requiredSparePart?: string) => void;
   consumeSparePart: (baseId: string, sparePartId: string, quantity?: number) => void;
 }
 
@@ -66,10 +66,11 @@ export function useGameEngine(): GameEngine {
   const applyUtfallOutcome = useCallback((
     baseId: string, aircraftId: string, repairTime: number,
     maintenanceTypeKey: string, weaponLoss: number, actionLabel: string,
+    requiredSparePart?: string,
   ) => {
     dispatch({
       type: "APPLY_UTFALL_OUTCOME",
-      baseId: baseId as BaseType, aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel,
+      baseId: baseId as BaseType, aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel, requiredSparePart,
     });
   }, []);
 
@@ -112,8 +113,8 @@ export function useGameEngine(): GameEngine {
     dispatch({ type: "PAUSE_MAINTENANCE", baseId: baseId as BaseType, aircraftId });
   }, []);
 
-  const markFaultNMC = useCallback((baseId: string, aircraftId: string, repairTime: number, maintenanceTypeKey: string, actionLabel: string) => {
-    dispatch({ type: "MARK_FAULT_NMC", baseId: baseId as BaseType, aircraftId, repairTime, maintenanceTypeKey, actionLabel });
+  const markFaultNMC = useCallback((baseId: string, aircraftId: string, repairTime: number, maintenanceTypeKey: string, actionLabel: string, requiredSparePart?: string) => {
+    dispatch({ type: "MARK_FAULT_NMC", baseId: baseId as BaseType, aircraftId, repairTime, maintenanceTypeKey, actionLabel, requiredSparePart });
   }, []);
 
   const consumeSparePart = useCallback((baseId: string, sparePartId: string, quantity = 1) => {

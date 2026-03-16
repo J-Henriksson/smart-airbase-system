@@ -5,6 +5,7 @@ import { PHASE_ORDER, getNextPhase, isLastPhase, getPhaseDefinition } from "@/da
 import { MAINTENANCE_CREW_PER_AIRCRAFT } from "@/data/config/capacities";
 import { handlePhase } from "./phases";
 import { validateAction } from "./validators";
+import { uuid } from "./uuid";
 
 function addEvent(state: GameState, event: Omit<GameEvent, "id" | "timestamp">): GameState {
   return {
@@ -12,7 +13,7 @@ function addEvent(state: GameState, event: Omit<GameEvent, "id" | "timestamp">):
     events: [
       {
         ...event,
-        id: crypto.randomUUID(),
+        id: uuid(),
         timestamp: `Dag ${state.day} ${String(state.hour).padStart(2, "0")}:00`,
       },
       ...state.events,
@@ -53,7 +54,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return handleSendMissionDrop(state, action.baseId, action.aircraftId, action.missionType, action.durationHours);
 
     case "APPLY_UTFALL_OUTCOME":
-      return handleApplyUtfall(state, action.baseId, action.aircraftId, action.repairTime, action.maintenanceTypeKey, action.weaponLoss, action.actionLabel);
+      return handleApplyUtfall(state, action.baseId, action.aircraftId, action.repairTime, action.maintenanceTypeKey, action.weaponLoss, action.actionLabel, action.requiredSparePart);
 
     case "COMPLETE_LANDING_CHECK":
       return handleCompleteLandingCheck(state, action.baseId, action.aircraftId, action.sendToMaintenance, action.repairTime, action.maintenanceTypeKey, action.weaponLoss, action.actionLabel);
@@ -65,7 +66,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return handlePauseMaintenance(state, action.baseId, action.aircraftId);
 
     case "MARK_FAULT_NMC":
-      return handleMarkFaultNMC(state, action.baseId, action.aircraftId, action.repairTime, action.maintenanceTypeKey, action.actionLabel);
+      return handleMarkFaultNMC(state, action.baseId, action.aircraftId, action.repairTime, action.maintenanceTypeKey, action.actionLabel, action.requiredSparePart);
 
     case "CONSUME_SPARE_PART":
       return handleConsumeSparePart(state, action.baseId, action.sparePartId, action.quantity ?? 1);
@@ -81,7 +82,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ...state.atoOrders,
           {
             ...action.order,
-            id: `ato-custom-${crypto.randomUUID().slice(0, 8)}`,
+            id: `ato-custom-${uuid().slice(0, 8)}`,
             status: preAssigned?.length ? "assigned" : "pending",
             assignedAircraft: preAssigned ?? [],
           },
@@ -189,7 +190,7 @@ function handleDispatchOrder(state: GameState, orderId: string): GameState {
   });
 
   const newEvent: GameEvent = {
-    id: crypto.randomUUID(),
+    id: uuid(),
     timestamp: `Dag ${state.day} ${String(state.hour).padStart(2, "0")}:00`,
     type: "success",
     message: `ATO-order ${order.missionType} (${order.label}): ${order.assignedAircraft.length} fpl skickade från ${order.launchBase}`,
@@ -294,40 +295,56 @@ function handleApplyUtfall(
   maintenanceTypeKey: string,
   weaponLoss: number,
   actionLabel: string,
+  requiredSparePart?: string,
 ): GameState {
+  let consumedPartName: string | undefined;
+
   const updatedBases = state.bases.map((base) => {
     if (base.id !== baseId) return base;
     const aircraft = base.aircraft.map((ac) => {
       if (ac.id !== aircraftId) return ac;
       if (repairTime === 0) {
-        return { ...ac, status: "unavailable" as AircraftStatus };
+        // NMC — park the aircraft and remember which part will be needed when it enters the bay
+        return { ...ac, status: "unavailable" as AircraftStatus, requiredSparePart };
       }
       return {
         ...ac,
         status: "under_maintenance" as AircraftStatus,
         maintenanceType: maintenanceTypeKey as any,
         maintenanceTimeRemaining: repairTime,
+        requiredSparePart: undefined, // consumed below
       };
     });
     const maintCount = aircraft.filter((a) => a.status === "under_maintenance").length;
-    // Deduct crew when aircraft enters maintenance (same as hangarDropConfirm)
     const personnel = repairTime > 0
       ? base.personnel.map((p) => ({
           ...p,
           available: Math.max(0, p.available - (MAINTENANCE_CREW_PER_AIRCRAFT[p.id] ?? 0)),
         }))
       : base.personnel;
+
+    // Consume the spare part immediately when the aircraft goes straight into maintenance
+    let spareParts = base.spareParts;
+    if (repairTime > 0 && requiredSparePart) {
+      spareParts = base.spareParts.map((p) =>
+        p.id === requiredSparePart ? { ...p, quantity: Math.max(0, p.quantity - 1) } : p
+      );
+      consumedPartName = base.spareParts.find((p) => p.id === requiredSparePart)?.name ?? requiredSparePart;
+    }
+
     return {
       ...base,
       aircraft,
       personnel,
+      spareParts,
       maintenanceBays: { ...base.maintenanceBays, occupied: Math.min(maintCount, base.maintenanceBays.total) },
     };
   });
 
+  const partNote = consumedPartName ? ` — reservdel använd: ${consumedPartName}` : "";
   return addEvent({ ...state, bases: updatedBases }, {
     type: "warning",
-    message: `UTFALL: ${aircraftId} — ${actionLabel} — ${repairTime}h underhåll (Vapensystemsförlust ${weaponLoss}%)`,
+    message: `UTFALL: ${aircraftId} — ${actionLabel} — ${repairTime}h underhåll (Vapensystemsförlust ${weaponLoss}%)${partNote}`,
     base: baseId,
   });
 }
@@ -340,8 +357,13 @@ function handleHangarDropConfirm(
   maintenanceTypeKey: string,
   restoreHealth: boolean,
 ): GameState {
+  let consumedPartName: string | undefined;
+
   const updatedBases = state.bases.map((base) => {
     if (base.id !== baseId) return base;
+    const incoming = base.aircraft.find((a) => a.id === aircraftId);
+    const partToConsume = incoming?.requiredSparePart;
+
     const aircraft = base.aircraft.map((ac) => {
       if (ac.id !== aircraftId) return ac;
       return {
@@ -349,27 +371,38 @@ function handleHangarDropConfirm(
         status: "under_maintenance" as AircraftStatus,
         maintenanceType: maintenanceTypeKey as any,
         maintenanceTimeRemaining: repairTime,
-        // health restored to 100 on maintenance completion (handled in phases.ts)
+        requiredSparePart: undefined, // consumed below
       };
     });
     const maintCount = aircraft.filter((a) => a.status === "under_maintenance").length;
-    // Deduct crew from available personnel for this aircraft entering maintenance
     const personnel = base.personnel.map((p) => ({
       ...p,
       available: Math.max(0, p.available - (MAINTENANCE_CREW_PER_AIRCRAFT[p.id] ?? 0)),
     }));
+
+    // Consume the spare part stored on the NMC aircraft when it finally enters the bay
+    let spareParts = base.spareParts;
+    if (partToConsume) {
+      spareParts = base.spareParts.map((p) =>
+        p.id === partToConsume ? { ...p, quantity: Math.max(0, p.quantity - 1) } : p
+      );
+      consumedPartName = base.spareParts.find((p) => p.id === partToConsume)?.name ?? partToConsume;
+    }
+
     return {
       ...base,
       aircraft,
       personnel,
+      spareParts,
       maintenanceBays: { ...base.maintenanceBays, occupied: Math.min(maintCount, base.maintenanceBays.total) },
     };
   });
 
   const label = restoreHealth ? "Förebyggande underhåll" : "Felsökning/Reparation";
+  const partNote = consumedPartName ? ` — reservdel använd: ${consumedPartName}` : "";
   return addEvent({ ...state, bases: updatedBases }, {
     type: "info",
-    message: `🔧 ${aircraftId} — ${label} (${repairTime}h) påbörjat`,
+    message: `🔧 ${aircraftId} — ${label} (${repairTime}h) påbörjat${partNote}`,
     base: baseId,
   });
 }
@@ -381,6 +414,7 @@ function handleMarkFaultNMC(
   repairTime: number,
   maintenanceTypeKey: string,
   actionLabel: string,
+  requiredSparePart?: string,
 ): GameState {
   // Mark aircraft as unavailable (NMC) with fault data stored — NOT placed in a bay yet
   const updatedBases = state.bases.map((base) => {
@@ -395,6 +429,7 @@ function handleMarkFaultNMC(
           health: 0,
           maintenanceType: maintenanceTypeKey as any,
           maintenanceTimeRemaining: repairTime,
+          requiredSparePart,
         };
       }),
     };

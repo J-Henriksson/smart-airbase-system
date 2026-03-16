@@ -165,11 +165,11 @@ export type GameAction =
   | { type: "APPLY_RECOMMENDATION"; recommendationId: string }
   | { type: "DISMISS_RECOMMENDATION"; recommendationId: string }
   | { type: "SEND_MISSION_DROP"; baseId: BaseType; aircraftId: string; missionType: MissionType; durationHours?: number }
-  | { type: "APPLY_UTFALL_OUTCOME"; baseId: BaseType; aircraftId: string; repairTime: number; maintenanceTypeKey: string; weaponLoss: number; actionLabel: string }
+  | { type: "APPLY_UTFALL_OUTCOME"; baseId: BaseType; aircraftId: string; repairTime: number; maintenanceTypeKey: string; weaponLoss: number; actionLabel: string; requiredSparePart?: string }
   | { type: "COMPLETE_LANDING_CHECK"; baseId: BaseType; aircraftId: string; sendToMaintenance: boolean; repairTime?: number; maintenanceTypeKey?: string; weaponLoss?: number; actionLabel?: string }
   | { type: "HANGAR_DROP_CONFIRM"; baseId: BaseType; aircraftId: string; repairTime: number; maintenanceTypeKey: string; restoreHealth: boolean }
   | { type: "PAUSE_MAINTENANCE"; baseId: BaseType; aircraftId: string }
-  | { type: "MARK_FAULT_NMC"; baseId: BaseType; aircraftId: string; repairTime: number; maintenanceTypeKey: string; actionLabel: string }
+  | { type: "MARK_FAULT_NMC"; baseId: BaseType; aircraftId: string; repairTime: number; maintenanceTypeKey: string; actionLabel: string; requiredSparePart?: string }
   | { type: "CONSUME_SPARE_PART"; baseId: BaseType; sparePartId: string; quantity?: number }
   | { type: "RESET_GAME" };
 
@@ -189,6 +189,8 @@ export interface Aircraft {
   maintenanceTimeRemaining?: number;
   maintenanceType?: MaintenanceType;
   maintenanceTask?: MaintenanceTask;
+  /** Spare part ID that must be consumed when this aircraft enters the maintenance bay */
+  requiredSparePart?: string;
 }
 
 export interface SparePartStock {

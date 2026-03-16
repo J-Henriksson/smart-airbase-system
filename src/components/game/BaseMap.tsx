@@ -26,7 +26,7 @@ export type DropZone = "runway" | "hangar" | "spareparts" | "fuel" | "ammo";
 interface BaseMapProps {
   base: Base;
   onDropAircraft: (aircraftId: string, zone: DropZone) => void;
-  onUtfallOutcome?: (aircraftId: string, repairTime: number, maintenanceTypeKey: string, weaponLoss: number, actionLabel: string) => void;
+  onUtfallOutcome?: (aircraftId: string, repairTime: number, maintenanceTypeKey: string, weaponLoss: number, actionLabel: string, requiredSparePart?: string) => void;
   /** Aircraft IDs whose ATO mission window is active NOW (pulsing orange) */
   overdueAircraftIds?: string[];
   /** Mission label per urgent aircraft ID */
@@ -968,6 +968,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome, overdueAircraft
                 outcome.maintenanceTypeKey,
                 outcome.weaponLoss,
                 outcome.actionLabel,
+                outcome.requiredSparePart,
               );
             }}
           />
