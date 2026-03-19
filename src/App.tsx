@@ -7,6 +7,7 @@ import { GameProvider } from "@/context/GameContext";
 import Index from "./pages/Index.tsx";
 import ATO from "./pages/ATO.tsx";
 import MapPage from "./pages/Map.tsx";
+import AircraftDashboard from "./pages/AircraftDashboard.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/ato" element={<ATO />} />
             <Route path="/map" element={<MapPage />} />
+            <Route path="/aircraft/:tailNumber" element={<AircraftDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

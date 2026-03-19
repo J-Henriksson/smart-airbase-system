@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useGame } from "@/context/GameContext";
 import { TopBar } from "@/components/game/TopBar";
 import { MissionSchedule } from "@/components/game/MissionSchedule";
@@ -21,29 +23,65 @@ import { LastBayWarningModal } from "@/components/game/LastBayWarningModal";
 import { SparePartsPickerModal } from "@/components/game/SparePartsPickerModal";
 import { toast } from "sonner";
 import { BaseType } from "@/types/game";
-import { ShieldCheck, Crosshair, Hammer, Users, Siren, Clock, MapPin, PlaneTakeoff } from "lucide-react";
+import {
+  ShieldCheck, Crosshair, Hammer, Users, Siren, Clock,
+  MapPin, PlaneTakeoff, ChevronRight, BarChart3, BookOpen,
+} from "lucide-react";
 
+// ─── Section type ─────────────────────────────────────────────────────────────
+type Section = "base" | "missions" | "maintenance" | "planning" | "resources";
+
+// ─── Section panel wrapper ────────────────────────────────────────────────────
+function Panel({ title, icon: Icon, children }: {
+  title: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl overflow-hidden"
+      style={{ border: "1px solid hsl(215 14% 84%)", background: "hsl(0 0% 100%)", boxShadow: "0 1px 3px hsl(220 63% 18% / 0.06)" }}>
+      <div className="flex items-center gap-2.5 px-4 py-3 border-b"
+        style={{ borderColor: "hsl(215 14% 88%)", background: "linear-gradient(90deg, hsl(220 63% 18% / 0.04), transparent)" }}>
+        <Icon className="h-4 w-4" style={{ color: "hsl(220 63% 30%)" }} />
+        <span className="text-[10px] font-mono font-bold uppercase tracking-widest"
+          style={{ color: "hsl(220 63% 18%)" }}>{title}</span>
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const Index = () => {
-  const { state, advanceTurn, startMaintenance, sendOnMission, resetGame, moveAircraftToMaintenance, sendMissionDrop, applyUtfallOutcome, completeLandingCheck, applyRecommendation, dismissRecommendation, hangarDropConfirm, pauseMaintenance, markFaultNMC, consumeSparePart } = useGame();
-  const [selectedBaseId, setSelectedBaseId] = useState<BaseType>("MOB");
-  const [pendingRunwayCheck, setPendingRunwayCheck] = useState<string | null>(null);
+  const {
+    state, advanceTurn, startMaintenance, sendOnMission, resetGame,
+    moveAircraftToMaintenance, sendMissionDrop, applyUtfallOutcome,
+    completeLandingCheck, applyRecommendation, dismissRecommendation,
+    hangarDropConfirm, pauseMaintenance, markFaultNMC, consumeSparePart,
+  } = useGame();
+  const navigate = useNavigate();
+
+  const [selectedBaseId, setSelectedBaseId]           = useState<BaseType>("MOB");
+  const [activeSection, setActiveSection]             = useState<Section>("base");
+  const [pendingRunwayCheck, setPendingRunwayCheck]   = useState<string | null>(null);
   const [pendingMaintenanceCheck, setPendingMaintenanceCheck] = useState<string | null>(null);
-  const [redRunwayWarning, setRedRunwayWarning] = useState<string | null>(null);
-  const [hangarFullWarning, setHangarFullWarning] = useState<string | null>(null);
-  const [lastBayWarning, setLastBayWarning] = useState<string | null>(null);
-  const [sparePartsFullWarning, setSparePartsFullWarning] = useState<string | null>(null);
+  const [redRunwayWarning, setRedRunwayWarning]       = useState<string | null>(null);
+  const [hangarFullWarning, setHangarFullWarning]     = useState<string | null>(null);
+  const [lastBayWarning, setLastBayWarning]           = useState<string | null>(null);
+  const [sparePartsFullWarning, setSparePartsFullWarning]   = useState<string | null>(null);
   const [sparePartsPickerAircraftId, setSparePartsPickerAircraftId] = useState<string | null>(null);
-  const [pendingUtfallFull, setPendingUtfallFull] = useState<{
+  const [pendingUtfallFull, setPendingUtfallFull]     = useState<{
     aircraftId: string; repairTime: number; typeKey: string; weaponLoss: number; label: string; requiredSparePart?: string;
   } | null>(null);
 
-  const selectedBase = state.bases.find((b) => b.id === selectedBaseId)!;
-
-  const mcTotal = selectedBase.aircraft.filter((a) => a.status === "ready").length;
-  const onMissionTotal = selectedBase.aircraft.filter((a) => a.status === "on_mission").length;
-  const inMaintTotal = selectedBase.aircraft.filter((a) => a.status === "under_maintenance" || a.status === "unavailable").length;
-  const personnelAvail = selectedBase.personnel.reduce((s, p) => s + p.available, 0);
-  const personnelTotal = selectedBase.personnel.reduce((s, p) => s + p.total, 0);
+  const selectedBase     = state.bases.find((b) => b.id === selectedBaseId)!;
+  const mcTotal          = selectedBase.aircraft.filter((a) => a.status === "ready").length;
+  const onMissionTotal   = selectedBase.aircraft.filter((a) => a.status === "on_mission").length;
+  const inMaintTotal     = selectedBase.aircraft.filter((a) => a.status === "under_maintenance" || a.status === "unavailable").length;
+  const personnelAvail   = selectedBase.personnel.reduce((s, p) => s + p.available, 0);
+  const personnelTotal   = selectedBase.personnel.reduce((s, p) => s + p.total, 0);
+  const kritiskaResurser = selectedBase.spareParts.filter((p) => p.quantity / p.maxQuantity < 0.3).length +
+    selectedBase.ammunition.filter((a) => a.quantity / a.max < 0.3).length;
 
   const handleDropAircraft = (aircraftId: string, zone: DropZone) => {
     const aircraft = selectedBase.aircraft.find((a) => a.id === aircraftId);
@@ -51,335 +89,369 @@ const Index = () => {
     const tail = aircraft.tailNumber || aircraftId;
 
     if (zone === "runway") {
-      if (aircraft.status !== "ready") {
-        toast.error(`${tail} är inte MC — kan ej sändas på uppdrag`);
-        return;
-      }
-      if ((aircraft.health ?? 100) <= 30) {
-        setRedRunwayWarning(aircraftId);
-        return;
-      }
+      if (aircraft.status !== "ready") { toast.error(`${tail} är inte MC — kan ej sändas på uppdrag`); return; }
+      if ((aircraft.health ?? 100) <= 30) { setRedRunwayWarning(aircraftId); return; }
       setPendingRunwayCheck(aircraftId);
-      return;
-
     } else if (zone === "hangar") {
-      if (aircraft.status === "on_mission") {
-        toast.error(`${tail} är på uppdrag — kan inte gå till hangar`);
-        return;
-      }
-      if (selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) {
-        setHangarFullWarning(aircraftId);
-        return;
-      }
-      // Warn before filling the last available bay
-      if (selectedBase.maintenanceBays.total - selectedBase.maintenanceBays.occupied === 1) {
-        setLastBayWarning(aircraftId);
-        return;
-      }
-      // Known fault (from runway ignore or landing check) — skip dice, place directly
+      if (aircraft.status === "on_mission") { toast.error(`${tail} är på uppdrag — kan inte gå till hangar`); return; }
+      if (selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) { setHangarFullWarning(aircraftId); return; }
+      if (selectedBase.maintenanceBays.total - selectedBase.maintenanceBays.occupied === 1) { setLastBayWarning(aircraftId); return; }
       if (aircraft.status === "unavailable" && aircraft.maintenanceTimeRemaining != null && aircraft.maintenanceType != null) {
         hangarDropConfirm(selectedBaseId, aircraftId, aircraft.maintenanceTimeRemaining, aircraft.maintenanceType, false);
         toast.success(`🔧 ${tail} → ${aircraft.maintenanceType} (${aircraft.maintenanceTimeRemaining}h) — direkt till hangar`);
         return;
       }
       setPendingMaintenanceCheck(aircraftId);
-      return;
-
     } else if (zone === "spareparts") {
-      if (aircraft.status === "on_mission") {
-        toast.error(`${tail} är på uppdrag`);
-        return;
-      }
-      // LRU repair requires a free maintenance bay — block if all occupied
-      if (selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) {
-        setSparePartsFullWarning(aircraftId);
-        return;
-      }
-      // Open part picker — let user choose which component to replace
+      if (aircraft.status === "on_mission") { toast.error(`${tail} är på uppdrag`); return; }
+      if (selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) { setSparePartsFullWarning(aircraftId); return; }
       setSparePartsPickerAircraftId(aircraftId);
-
     } else if (zone === "fuel") {
-      if (aircraft.status === "on_mission") {
-        toast.info(`${tail} är på uppdrag — tankning vid retur`);
-        return;
-      }
-      // Fuel is base-level — just inform
+      if (aircraft.status === "on_mission") { toast.info(`${tail} är på uppdrag — tankning vid retur`); return; }
       toast.info(`⛽ ${tail} schemalagd för tankning (bränslenivå: ${Math.round(selectedBase.fuel)}%)`);
-
     } else if (zone === "ammo") {
-      if (aircraft.status === "on_mission") {
-        toast.info(`${tail} är på uppdrag — beväpning vid retur`);
-        return;
-      }
+      if (aircraft.status === "on_mission") { toast.info(`${tail} är på uppdrag — beväpning vid retur`); return; }
       toast.info(`💣 ${tail} schemalagd för beväpning vid ammodepån`);
     }
   };
-  // Aircraft mission markers for Basöversikt:
-  //   urgentMap   = assigned to an ATO order whose window is active RIGHT NOW (pulsing orange)
-  //   upcomingMap = assigned to an ATO order not yet started (steady blue)
-  //   fallback    = hash-based simulated slot active now, no real ATO assignment (pulsing orange)
+
   const SCHD_MISSIONS = ["DCA", "QRA", "RECCE", "AEW", "AI_DT", "ESCORT"] as const;
-  const urgentMap: Record<string, string> = {};
+  const urgentMap: Record<string, string>   = {};
   const upcomingMap: Record<string, string> = {};
 
   selectedBase.aircraft.forEach((ac) => {
     if (ac.status !== "ready" && ac.status !== "allocated") return;
-
-    // All ATO orders that have this aircraft assigned
     const myOrders = state.atoOrders.filter(
-      (o) => o.launchBase === selectedBaseId &&
-             o.assignedAircraft.includes(ac.id) &&
+      (o) => o.launchBase === selectedBaseId && o.assignedAircraft.includes(ac.id) &&
              (o.status === "assigned" || o.status === "pending")
     );
-
     if (myOrders.length > 0) {
       const activeNow = myOrders.find((o) => o.startHour <= state.hour && o.endHour > state.hour);
       const upcoming  = myOrders.find((o) => o.startHour > state.hour);
-      if (activeNow) { urgentMap[ac.id] = activeNow.missionType; }
-      else if (upcoming) { upcomingMap[ac.id] = `${upcoming.missionType} ${String(upcoming.startHour).padStart(2,"0")}:00`; }
-      return; // has real assignment — skip hash fallback
+      if (activeNow) urgentMap[ac.id] = activeNow.missionType;
+      else if (upcoming) upcomingMap[ac.id] = `${upcoming.missionType} ${String(upcoming.startHour).padStart(2, "0")}:00`;
+      return;
     }
-
-    // Hash-based simulated fallback (same formula as FlygschemaTidslinje)
-    const hash = parseInt(ac.id.replace(/\D/g, "")) || 1;
+    const hash   = parseInt(ac.id.replace(/\D/g, "")) || 1;
     const mStart = 6 + (hash % 9);
-    const mEnd = Math.min(21, mStart + 2 + (hash % 3));
-    if (state.hour >= mStart && state.hour < mEnd) {
-      urgentMap[ac.id] = SCHD_MISSIONS[hash % SCHD_MISSIONS.length];
-    }
+    const mEnd   = Math.min(21, mStart + 2 + (hash % 3));
+    if (state.hour >= mStart && state.hour < mEnd) urgentMap[ac.id] = SCHD_MISSIONS[hash % SCHD_MISSIONS.length];
   });
 
-  const overdueAircraftIds = Object.keys(urgentMap);
+  const overdueAircraftIds   = Object.keys(urgentMap);
   const overdueMissionLabels = urgentMap;
-  const upcomingAircraftIds = Object.keys(upcomingMap);
-  const upcomingMissionLabels = upcomingMap;
 
-  const kritiskaResurser = selectedBase.spareParts.filter((p) => p.quantity / p.maxQuantity < 0.3).length +
-    selectedBase.ammunition.filter((a) => a.quantity / a.max < 0.3).length;
-
-
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("sv-SE", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-
-  // Runway check: aircraft awaiting pre-flight BIT check
-  const runwayAircraft = pendingRunwayCheck
-    ? selectedBase.aircraft.find((a) => a.id === pendingRunwayCheck)
-    : null;
-
-  // Landing check: drive modal from aircraft with status "returning" directly
   let firstReturning: { aircraft: (typeof state.bases)[0]["aircraft"][0]; baseId: BaseType } | null = null;
   for (const base of state.bases) {
     const ac = base.aircraft.find((a) => a.status === "returning");
     if (ac) { firstReturning = { aircraft: ac, baseId: base.id }; break; }
   }
 
+  const now     = new Date();
+  const dateStr = now.toLocaleDateString("sv-SE", { weekday: "short", month: "short", day: "numeric" });
+
+  const runwayAircraft = pendingRunwayCheck
+    ? selectedBase.aircraft.find((a) => a.id === pendingRunwayCheck)
+    : null;
+
+  // ─── Nav items ─────────────────────────────────────────────────────────────
+  const navItems: { id: Section; label: string; Icon: React.ElementType; badge?: number; badgeColor?: string }[] = [
+    { id: "base",        label: "Basöversikt",  Icon: MapPin,       badge: undefined },
+    { id: "missions",    label: "Uppdrag",       Icon: Crosshair,    badge: onMissionTotal || undefined, badgeColor: "#3b82f6" },
+    { id: "maintenance", label: "Hangar",        Icon: Hammer,       badge: inMaintTotal || undefined, badgeColor: inMaintTotal > 0 ? "#d97706" : "#22a05a" },
+    { id: "planning",    label: "Planering",     Icon: BookOpen,     badge: undefined },
+    { id: "resources",   label: "Resurser",      Icon: BarChart3,    badge: kritiskaResurser || undefined, badgeColor: "#D9192E" },
+  ];
+
+  // ─── Aircraft status styling ───────────────────────────────────────────────
+  const acColor = (status: string) =>
+    status === "ready"             ? "#22a05a"
+    : status === "on_mission"      ? "#3b82f6"
+    : status === "under_maintenance"? "#d97706"
+    : status === "unavailable"     ? "#D9192E"
+    : status === "returning"       ? "#a855f7"
+    : "#64748b";
+
+  const acLabel = (status: string) =>
+    status === "ready"             ? "MC"
+    : status === "on_mission"      ? "UP"
+    : status === "under_maintenance"? "UH"
+    : status === "unavailable"     ? "NMC"
+    : status === "returning"       ? "RET"
+    : "–";
+
+  // ───────────────────────────────────────────────────────────────────────────
+
   return (
-    <div className="flex flex-col h-screen" style={{ background: "hsl(216 18% 95%)" }}>
+    <div className="flex flex-col h-screen font-mono" style={{ background: "hsl(0 0% 100%)" }}>
       <TopBar state={state} onAdvanceTurn={advanceTurn} onReset={resetGame} />
 
-      {/* Sub-header: datum + base tabs */}
-      <div className="px-4 py-2 flex items-center justify-between"
-        style={{
-          background: "hsl(0 0% 100%)",
-          borderBottom: "1px solid hsl(215 14% 86%)",
-          boxShadow: "0 1px 4px hsl(220 63% 18% / 0.06)",
-        }}>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-xs font-mono" style={{ color: "hsl(218 15% 50%)" }}>
-            <Clock className="h-3.5 w-3.5" />
-            {dateStr}
+      {/* ── COMMAND STRIP ── */}
+      <div className="flex items-center gap-3 px-5 py-2 flex-shrink-0 border-b"
+        style={{ background: "#0C234C", borderColor: "rgba(215,222,225,0.1)" }}>
+
+        {/* Time / turn */}
+        <div className="flex items-center gap-1.5 text-[10px] font-mono pr-3 border-r"
+          style={{ color: "rgba(215,222,225,0.38)", borderColor: "rgba(215,222,225,0.1)" }}>
+          <Clock className="h-3 w-3" />
+          {dateStr} · T{state.turnNumber} · {String(state.hour).padStart(2, "0")}:00Z
+        </div>
+
+        {/* Base selector */}
+        <div className="flex items-center gap-1">
+          {state.bases.map((base) => {
+            const mc    = base.aircraft.filter((a) => a.status === "ready").length;
+            const total = base.aircraft.length;
+            const isSelected = base.id === selectedBaseId;
+            return (
+              <button key={base.id}
+                onClick={() => setSelectedBaseId(base.id)}
+                className="flex items-center gap-2 px-3 py-1 text-[10px] font-mono rounded-lg border transition-all"
+                style={isSelected ? {
+                  background: "rgba(217,25,46,0.18)", color: "#D7DEE1",
+                  borderColor: "rgba(217,25,46,0.55)", fontWeight: 700,
+                } : {
+                  background: "rgba(255,255,255,0.04)", color: "rgba(215,222,225,0.4)",
+                  borderColor: "rgba(215,222,225,0.1)",
+                }}
+              >
+                <MapPin className="h-2.5 w-2.5" />
+                <span className="font-black">{base.id}</span>
+                <span style={{ color: isSelected ? "hsl(42 64% 60%)" : "rgba(215,222,225,0.3)" }}>
+                  {mc}/{total} MC
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Live alerts in strip */}
+        {firstReturning && (
+          <span className="flex items-center gap-1.5 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold"
+            style={{ background: "rgba(168,85,247,0.12)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.35)" }}>
+            <PlaneTakeoff className="h-3 w-3" />
+            RETUR INKOMMANDE — {firstReturning.aircraft.tailNumber}
+          </span>
+        )}
+        {kritiskaResurser > 0 && (
+          <button
+            onClick={() => setActiveSection("resources")}
+            className="flex items-center gap-1.5 text-[10px] font-mono px-2.5 py-1 rounded-full font-bold transition-all hover:brightness-110"
+            style={{ background: "rgba(217,25,46,0.12)", color: "#D9192E", border: "1px solid rgba(217,25,46,0.4)" }}
+          >
+            <Siren className="h-3 w-3 animate-pulse" />
+            {kritiskaResurser} KRITISKA RESURSER →
+          </button>
+        )}
+      </div>
+
+      {/* ── BODY ── */}
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* ── LEFT SIDEBAR NAV ── */}
+        <nav className="w-52 flex-shrink-0 flex flex-col border-r"
+          style={{ background: "hsl(0 0% 100%)", borderColor: "hsl(215 14% 86%)" }}>
+
+          {/* KPI mini-grid */}
+          <div className="px-3 pt-3 pb-3 border-b" style={{ borderColor: "hsl(215 14% 88%)" }}>
+            <div className="text-[8px] font-mono uppercase tracking-widest mb-2 px-1"
+              style={{ color: "hsl(218 15% 55%)" }}>
+              {selectedBase.name} — Snapshot
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { label: "MC",      value: mcTotal,          color: "#22a05a" },
+                { label: "Uppdrag", value: onMissionTotal,   color: "#3b82f6" },
+                { label: "UH/NMC",  value: inMaintTotal,     color: inMaintTotal > 0 ? "#d97706" : "rgba(215,222,225,0.4)" },
+                { label: "Personal",value: `${personnelAvail}/${personnelTotal}`, color: "rgba(215,222,225,0.55)" },
+              ].map((k) => (
+                <div key={k.label} className="rounded-lg px-2 py-1.5 text-center"
+                  style={{ background: "hsl(216 18% 96%)", border: "1px solid hsl(215 14% 88%)" }}>
+                  <div className="text-sm font-black font-mono leading-none" style={{ color: k.color }}>{k.value}</div>
+                  <div className="text-[7px] font-mono uppercase tracking-wider mt-0.5"
+                    style={{ color: "hsl(218 15% 55%)" }}>{k.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          {/* Base tabs */}
-          <div className="flex items-center gap-1">
-            {state.bases.map((base) => {
-              const mc = base.aircraft.filter((a) => a.status === "ready").length;
-              const total = base.aircraft.length;
-              const isSelected = base.id === selectedBaseId;
-              const mcPct = total > 0 ? mc / total : 0;
+
+          {/* Nav items */}
+          <div className="py-1.5">
+            {navItems.map(({ id, label, Icon, badge, badgeColor }) => {
+              const isActive = activeSection === id;
               return (
-                <button
-                  key={base.id}
-                  onClick={() => setSelectedBaseId(base.id)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono rounded-lg transition-all"
-                  style={isSelected ? {
-                    background: "hsl(220 63% 18%)",
-                    color: "hsl(200 12% 92%)",
-                    boxShadow: "0 2px 8px hsl(220 63% 18% / 0.25)",
-                  } : {
-                    background: "hsl(216 18% 96%)",
-                    color: "hsl(218 15% 50%)",
-                    border: "1px solid hsl(215 14% 86%)",
+                <button key={id}
+                  onClick={() => setActiveSection(id)}
+                  className="relative w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all border-l-2"
+                  style={{
+                    borderLeftColor: isActive ? "#D9192E" : "transparent",
+                    background: isActive ? "hsl(220 63% 18% / 0.06)" : "transparent",
+                    color: isActive ? "hsl(220 63% 18%)" : "hsl(218 15% 50%)",
                   }}
                 >
-                  <span className="font-black">{base.id}</span>
-                  <span className="text-[10px] px-1.5 py-px rounded-full"
-                    style={{
-                      background: isSelected ? "hsl(42 64% 53% / 0.3)" : "hsl(215 14% 90%)",
-                      color: isSelected ? "hsl(42 64% 62%)" : "hsl(218 15% 55%)",
-                    }}>
-                    {mc}/{total}
-                  </span>
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wide flex-1">{label}</span>
+                  {badge != null && badge > 0 && (
+                    <span className="h-4 min-w-[1rem] px-1 rounded-full text-[8px] font-black flex items-center justify-center"
+                      style={{ background: badgeColor ?? "#D9192E", color: "white" }}>
+                      {badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {kritiskaResurser > 0 && (
-            <span className="flex items-center gap-1.5 text-[10px] font-mono px-3 py-1 rounded-full font-bold"
-              style={{
-                background: "hsl(353 74% 47% / 0.10)",
-                color: "hsl(353 74% 42%)",
-                border: "1px solid hsl(353 74% 47% / 0.3)",
-              }}>
-              <Siren className="h-3 w-3 animate-pulse" />
-              {kritiskaResurser} KRITISKA RESURSER
-            </span>
-          )}
-        </div>
-      </div>
 
-      {/* Main scrollable content */}
-      <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-0">
-        <div className="overflow-y-auto p-4 space-y-4">
-
-          {/* ROW 1: KPI strip */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <StatusKort titel="Mission Capable" varde={mcTotal} subtitel={`av ${selectedBase.aircraft.length} totalt`} ikon={<ShieldCheck className="h-5 w-5" />} farg="green" max={selectedBase.aircraft.length} />
-            <StatusKort titel="På uppdrag" varde={onMissionTotal} subtitel="aktiva flygningar" ikon={<Crosshair className="h-5 w-5" />} farg="blue" />
-            <StatusKort titel="I underhåll" varde={inMaintTotal} subtitel="NMC + UH" ikon={<Hammer className="h-5 w-5" />} farg="yellow" />
-            <StatusKort titel="Personal" varde={`${personnelAvail}/${personnelTotal}`} subtitel="tillgänglig personal" ikon={<Users className="h-5 w-5" />} farg="purple" />
-            <StatusKort titel="Resurslarm" varde={kritiskaResurser} subtitel={kritiskaResurser > 0 ? "behöver åtgärd" : "alla nominella"} ikon={<Siren className="h-5 w-5" />} farg={kritiskaResurser > 0 ? "red" : "green"} />
-          </div>
-
-          {/* ROW 2: Base Map */}
-          <div className="rounded-xl overflow-hidden"
-            style={{
-              background: "hsl(0 0% 100%)",
-              border: "1px solid hsl(215 14% 84%)",
-              boxShadow: "0 1px 3px hsl(220 63% 18% / 0.06), 0 4px 12px hsl(220 63% 18% / 0.04)",
-            }}>
-            <div className="px-4 py-3 flex items-center gap-2"
-              style={{ borderBottom: "1px solid hsl(215 14% 88%)",
-                background: "linear-gradient(90deg, hsl(220 63% 18% / 0.04), transparent)" }}>
-              <MapPin className="h-4 w-4" style={{ color: "hsl(220 63% 30%)" }} />
-              <h3 className="font-sans font-bold text-sm" style={{ color: "hsl(220 63% 18%)" }}>
-                BASÖVERSIKT — {selectedBase.name}
-              </h3>
-              <span className="text-[9px] font-mono ml-2" style={{ color: "hsl(218 15% 55%)" }}>
-                Klicka på byggnader för detaljer
-              </span>
-            </div>
-            <BaseMap
-              base={selectedBase}
-              onDropAircraft={handleDropAircraft}
-              overdueAircraftIds={overdueAircraftIds}
-              overdueMissionLabels={overdueMissionLabels}
-              onUtfallOutcome={(aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel, requiredSparePart) => {
-                if (repairTime > 0 && selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) {
-                  setPendingUtfallFull({ aircraftId, repairTime, typeKey: maintenanceTypeKey, weaponLoss, label: actionLabel, requiredSparePart });
-                } else {
-                  applyUtfallOutcome(selectedBaseId, aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel, requiredSparePart);
-                }
-              }}
-            />
-          </div>
-
-          {/* ROW 3: Turn Phase Tracker */}
-          <TurnPhaseTracker
-            currentPhase={state.turnPhase}
-            turnNumber={state.turnNumber}
-            onAdvancePhase={advanceTurn}
-          />
-
-          {/* Phase-specific panel */}
-          <PhasePanel state={state} />
-
-          {/* ROW 4: Dagens missioner + Larm */}
-          <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4">
-            <div className="rounded-xl overflow-hidden"
-              style={{
-                background: "hsl(0 0% 100%)",
-                border: "1px solid hsl(215 14% 84%)",
-                boxShadow: "0 1px 3px hsl(220 63% 18% / 0.06)",
-              }}>
-              <div className="px-4 py-3 flex items-center gap-2"
-                style={{ borderBottom: "1px solid hsl(215 14% 88%)",
-                  background: "linear-gradient(90deg, hsl(220 63% 18% / 0.04), transparent)" }}>
-                <Crosshair className="h-4 w-4" style={{ color: "hsl(220 63% 30%)" }} />
-                <h3 className="font-sans font-bold text-sm" style={{ color: "hsl(220 63% 18%)" }}>
-                  DAGENS MISSIONER — ATO-UPPDRAG
-                </h3>
-              </div>
-              <div className="p-4">
-                <DagensMissioner base={selectedBase} hour={state.hour} phase={state.phase} atoOrders={state.atoOrders} />
-              </div>
-            </div>
-            <LarmPanel events={state.events} />
-          </div>
-
-          {/* ROW 5: Flygschema Tidslinje */}
-          <div className="rounded-xl overflow-hidden"
-            style={{
-              background: "hsl(0 0% 100%)",
-              border: "1px solid hsl(215 14% 84%)",
-              boxShadow: "0 1px 3px hsl(220 63% 18% / 0.06)",
-            }}>
-            <div className="px-4 py-3"
-              style={{ borderBottom: "1px solid hsl(215 14% 88%)",
-                background: "linear-gradient(90deg, hsl(220 63% 18% / 0.04), transparent)" }}>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" style={{ color: "hsl(220 63% 38%)" }} />
-                <h3 className="font-sans font-bold text-sm" style={{ color: "hsl(220 63% 18%)" }}>
-                  FLYGSCHEMA — DAGENS AKTIVITETER
-                </h3>
-                <span className="text-[9px] font-mono ml-2" style={{ color: "hsl(218 15% 55%)" }}>
-                  06:00–22:00 · Timmar kvar till 100h-service visas höger
+          {/* ── Fleet list ── */}
+          <div className="flex-1 overflow-y-auto border-t" style={{ borderColor: "hsl(215 14% 88%)" }}>
+            <div className="px-3 pt-2.5 pb-1">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[8px] font-mono uppercase tracking-widest"
+                  style={{ color: "hsl(218 15% 55%)" }}>Flygplan</span>
+                <span className="text-[8px] font-mono" style={{ color: "hsl(218 15% 55%)" }}>
+                  → DASHBOARD
                 </span>
               </div>
-            </div>
-            <div className="p-4">
-              <FlygschemaTidslinje base={selectedBase} hour={state.hour} atoOrders={state.atoOrders} />
-            </div>
-          </div>
-
-          {/* ROW 6: Uppdragsschema (Gantt) */}
-          <MissionSchedule atoOrders={state.atoOrders} day={state.day} hour={state.hour} />
-
-          {/* ROW 7: Maintenance + Remaining Life */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <MaintenanceBays base={selectedBase} onDropAircraft={handleDropAircraft} />
-            {/* Remaining Life */}
-            <div className="rounded-xl overflow-hidden"
-              style={{
-                background: "hsl(0 0% 100%)",
-                border: "1px solid hsl(215 14% 84%)",
-                boxShadow: "0 1px 3px hsl(220 63% 18% / 0.06)",
-              }}>
-              <div className="px-4 py-3"
-                style={{ borderBottom: "1px solid hsl(215 14% 88%)",
-                  background: "linear-gradient(90deg, hsl(220 63% 18% / 0.04), transparent)" }}>
-                <div className="flex items-center gap-2">
-                  <PlaneTakeoff className="h-4 w-4" style={{ color: "hsl(220 63% 30%)" }} />
-                  <h3 className="font-sans font-bold text-sm" style={{ color: "hsl(220 63% 18%)" }}>
-                    REMAINING LIFE & SERVICE — {selectedBase.name}
-                  </h3>
-                </div>
-              </div>
-              <div className="p-4">
-                <RemainingLifeGraf bases={[selectedBase]} phase={state.phase} />
+              <div className="space-y-0.5">
+                {selectedBase.aircraft.map((ac) => {
+                  const col = acColor(ac.status);
+                  const lbl = acLabel(ac.status);
+                  return (
+                    <motion.button
+                      key={ac.id}
+                      whileHover={{ x: 2, transition: { duration: 0.1 } }}
+                      onClick={() => navigate(`/aircraft/${ac.tailNumber}`)}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors hover:bg-black/5"
+                      style={{ border: `1px solid ${col}28` }}
+                    >
+                      <span className="text-[10px] font-mono font-black" style={{ color: "hsl(220 63% 18%)" }}>
+                        {ac.tailNumber}
+                      </span>
+                      <span className="text-[8px] font-mono font-bold px-1 py-0.5 rounded"
+                        style={{ background: `${col}1A`, color: col }}>
+                        {lbl}
+                      </span>
+                      {(ac.health ?? 100) < 50 && (
+                        <span className="text-[8px] font-mono font-bold" style={{ color: col }}>
+                          {ac.health}%
+                        </span>
+                      )}
+                      <ChevronRight className="h-2.5 w-2.5 ml-auto flex-shrink-0 opacity-20" />
+                    </motion.button>
+                  );
+                })}
               </div>
             </div>
           </div>
+        </nav>
+
+        {/* ── MAIN CONTENT ── */}
+        <div className="flex-1 overflow-y-auto" style={{ background: "hsl(0 0% 100%)" }}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeSection}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.16 }}
+              className="p-5 space-y-5"
+            >
+
+              {/* ──── BASÖVERSIKT ──── */}
+              {activeSection === "base" && (
+                <>
+                  {/* KPI strip */}
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <StatusKort titel="Mission Capable" varde={mcTotal} subtitel={`av ${selectedBase.aircraft.length} totalt`} ikon={<ShieldCheck className="h-5 w-5" />} farg="green" max={selectedBase.aircraft.length} />
+                    <StatusKort titel="På uppdrag" varde={onMissionTotal} subtitel="aktiva flygningar" ikon={<Crosshair className="h-5 w-5" />} farg="blue" />
+                    <StatusKort titel="I underhåll" varde={inMaintTotal} subtitel="NMC + UH" ikon={<Hammer className="h-5 w-5" />} farg="yellow" />
+                    <StatusKort titel="Personal" varde={`${personnelAvail}/${personnelTotal}`} subtitel="tillgänglig" ikon={<Users className="h-5 w-5" />} farg="purple" />
+                    <StatusKort titel="Resurslarm" varde={kritiskaResurser} subtitel={kritiskaResurser > 0 ? "behöver åtgärd" : "alla nominella"} ikon={<Siren className="h-5 w-5" />} farg={kritiskaResurser > 0 ? "red" : "green"} />
+                  </div>
+
+                  {/* Base Map */}
+                  <Panel title={`Basöversikt — ${selectedBase.name} · Klicka på byggnader för detaljer`} icon={MapPin}>
+                    <BaseMap
+                      base={selectedBase}
+                      onDropAircraft={handleDropAircraft}
+                      overdueAircraftIds={overdueAircraftIds}
+                      overdueMissionLabels={overdueMissionLabels}
+                      onUtfallOutcome={(aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel, requiredSparePart) => {
+                        if (repairTime > 0 && selectedBase.maintenanceBays.occupied >= selectedBase.maintenanceBays.total) {
+                          setPendingUtfallFull({ aircraftId, repairTime, typeKey: maintenanceTypeKey, weaponLoss, label: actionLabel, requiredSparePart });
+                        } else {
+                          applyUtfallOutcome(selectedBaseId, aircraftId, repairTime, maintenanceTypeKey, weaponLoss, actionLabel, requiredSparePart);
+                        }
+                      }}
+                    />
+                  </Panel>
+
+                  {/* Turn tracker + Phase panel */}
+                  <TurnPhaseTracker
+                    currentPhase={state.turnPhase}
+                    turnNumber={state.turnNumber}
+                    onAdvancePhase={advanceTurn}
+                  />
+                  <PhasePanel state={state} />
+                </>
+              )}
+
+              {/* ──── UPPDRAG ──── */}
+              {activeSection === "missions" && (
+                <>
+                  <Panel title="Dagens Missioner — ATO-Uppdrag" icon={Crosshair}>
+                    <DagensMissioner base={selectedBase} hour={state.hour} phase={state.phase} atoOrders={state.atoOrders} />
+                  </Panel>
+
+                  <Panel title={`Flygschema — 06:00–22:00 · Timmar till service visas höger`} icon={Clock}>
+                    <FlygschemaTidslinje base={selectedBase} hour={state.hour} atoOrders={state.atoOrders} />
+                  </Panel>
+
+                  <LarmPanel events={state.events} />
+                </>
+              )}
+
+              {/* ──── HANGAR ──── */}
+              {activeSection === "maintenance" && (
+                <>
+                  <MaintenanceBays base={selectedBase} onDropAircraft={handleDropAircraft} />
+
+                  <Panel title={`Remaining Life & Service — ${selectedBase.name}`} icon={BarChart3}>
+                    <RemainingLifeGraf bases={[selectedBase]} phase={state.phase} />
+                  </Panel>
+                </>
+              )}
+
+              {/* ──── PLANERING ──── */}
+              {activeSection === "planning" && (
+                <MissionSchedule atoOrders={state.atoOrders} day={state.day} hour={state.hour} />
+              )}
+
+              {/* ──── RESURSER ──── */}
+              {activeSection === "resources" && (
+                <>
+                  <Panel title="Resurser — Reservdelar, Bränsle & Ammunition" icon={BarChart3}>
+                    <ResursPanel base={selectedBase} phase={state.phase} />
+                  </Panel>
+                  <RecommendationFeed
+                    recommendations={state.recommendations}
+                    onApply={applyRecommendation}
+                    onDismiss={dismissRecommendation}
+                  />
+                </>
+              )}
+
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        {/* Right sidebar */}
-        <div className="h-full overflow-y-auto hidden lg:flex flex-col"
-          style={{ borderLeft: "1px solid hsl(215 14% 86%)", background: "hsl(0 0% 100%)" }}>
-          <div className="p-3" style={{ borderBottom: "1px solid hsl(215 14% 88%)" }}>
-            <ResursPanel base={selectedBase} phase={state.phase} />
-          </div>
-          <div className="flex-1 overflow-y-auto">
+        {/* ── RIGHT SIDEBAR (xl screens) ── */}
+        <div className="w-72 hidden xl:flex flex-col border-l flex-shrink-0"
+          style={{ background: "hsl(0 0% 100%)", borderColor: "hsl(215 14% 86%)" }}>
+          <LarmPanel events={state.events} />
+          <div className="flex-1 overflow-y-auto border-t" style={{ borderColor: "hsl(215 14% 88%)" }}>
             <RecommendationFeed
               recommendations={state.recommendations}
               onApply={applyRecommendation}
@@ -387,9 +459,11 @@ const Index = () => {
             />
           </div>
         </div>
+
       </div>
 
-      {/* Runway Pre-flight Check Modal */}
+      {/* ── ALL MODALS (unchanged logic) ── */}
+
       {pendingRunwayCheck && runwayAircraft && (
         <RunwayCheckModal
           key={pendingRunwayCheck}
@@ -418,7 +492,6 @@ const Index = () => {
         />
       )}
 
-      {/* Red aircraft runway warning */}
       {redRunwayWarning && (() => {
         const ac = selectedBase.aircraft.find((a) => a.id === redRunwayWarning);
         if (!ac) return null;
@@ -468,7 +541,6 @@ const Index = () => {
         );
       })()}
 
-      {/* Last Bay Warning Modal */}
       {lastBayWarning && (() => {
         const ac = selectedBase.aircraft.find((a) => a.id === lastBayWarning);
         if (!ac) return null;
@@ -491,10 +563,9 @@ const Index = () => {
         );
       })()}
 
-      {/* Hangar Full Modal */}
       {hangarFullWarning && (() => {
         const incoming = selectedBase.aircraft.find((a) => a.id === hangarFullWarning);
-        const inMaint = selectedBase.aircraft.filter((a) => a.status === "under_maintenance");
+        const inMaint  = selectedBase.aircraft.filter((a) => a.status === "under_maintenance");
         if (!incoming) return null;
         return (
           <HangarFullModal
@@ -505,7 +576,6 @@ const Index = () => {
             onPause={(pauseId) => {
               pauseMaintenance(selectedBaseId, pauseId);
               setHangarFullWarning(null);
-              // If incoming has a known fault, skip dice and place directly
               if (incoming.status === "unavailable" && incoming.maintenanceTimeRemaining != null && incoming.maintenanceType != null) {
                 hangarDropConfirm(selectedBaseId, incoming.id, incoming.maintenanceTimeRemaining, incoming.maintenanceType, false);
                 toast.success(`🔧 ${incoming.tailNumber} → direkt till hangar (${incoming.maintenanceTimeRemaining}h)`);
@@ -519,10 +589,9 @@ const Index = () => {
         );
       })()}
 
-      {/* Spareparts zone — bays full modal */}
       {sparePartsFullWarning && (() => {
         const incoming = selectedBase.aircraft.find((a) => a.id === sparePartsFullWarning);
-        const inMaint = selectedBase.aircraft.filter((a) => a.status === "under_maintenance");
+        const inMaint  = selectedBase.aircraft.filter((a) => a.status === "under_maintenance");
         if (!incoming) return null;
         return (
           <HangarFullModal
@@ -533,13 +602,9 @@ const Index = () => {
             onPause={(pauseId) => {
               pauseMaintenance(selectedBaseId, pauseId);
               setSparePartsFullWarning(null);
-              // Re-run the LRU repair now that a bay is free
               const lruPart = selectedBase.spareParts.find((p) => p.quantity > 0 && p.category === "Avionik")
                 ?? selectedBase.spareParts.find((p) => p.quantity > 0);
-              if (!lruPart) {
-                toast.error(`Inga reservdelar kvar — LRU-rep ej möjlig`);
-                return;
-              }
+              if (!lruPart) { toast.error(`Inga reservdelar kvar — LRU-rep ej möjlig`); return; }
               consumeSparePart(selectedBaseId, lruPart.id, 1);
               applyUtfallOutcome(selectedBaseId, incoming.id, 2, "quick_lru", 10, `Quick LRU replacement (${lruPart.name})`);
               toast.success(`${incoming.tailNumber} → LRU-reparation 2h — ${lruPart.name} använd`);
@@ -550,7 +615,6 @@ const Index = () => {
         );
       })()}
 
-      {/* Spare Parts Picker Modal */}
       {sparePartsPickerAircraftId && (() => {
         const ac = selectedBase.aircraft.find((a) => a.id === sparePartsPickerAircraftId);
         if (!ac) return null;
@@ -571,10 +635,9 @@ const Index = () => {
         );
       })()}
 
-      {/* Utfall → bays full: must free a bay before entering service */}
       {pendingUtfallFull && (() => {
         const incoming = selectedBase.aircraft.find((a) => a.id === pendingUtfallFull.aircraftId);
-        const inMaint = selectedBase.aircraft.filter((a) => a.status === "under_maintenance");
+        const inMaint  = selectedBase.aircraft.filter((a) => a.status === "under_maintenance");
         if (!incoming) return null;
         return (
           <HangarFullModal
@@ -598,7 +661,6 @@ const Index = () => {
         );
       })()}
 
-      {/* Maintenance Confirmation Modal */}
       {pendingMaintenanceCheck && (() => {
         const ac = selectedBase.aircraft.find((a) => a.id === pendingMaintenanceCheck);
         if (!ac) return null;
@@ -610,15 +672,13 @@ const Index = () => {
             onConfirm={(repairTime, typeKey, restoreHealth) => {
               hangarDropConfirm(selectedBaseId, pendingMaintenanceCheck, repairTime, typeKey, restoreHealth);
               setPendingMaintenanceCheck(null);
-              const label = restoreHealth ? "Förebyggande service" : "Reparation";
-              toast.success(`🔧 ${ac.tailNumber} → ${label} (${repairTime}h)`);
+              toast.success(`🔧 ${ac.tailNumber} → ${restoreHealth ? "Förebyggande service" : "Reparation"} (${repairTime}h)`);
             }}
             onCancel={() => setPendingMaintenanceCheck(null)}
           />
         );
       })()}
 
-      {/* Landing Reception Modal */}
       {firstReturning && (
         <LandingReceptionModal
           key={firstReturning.aircraft.id}

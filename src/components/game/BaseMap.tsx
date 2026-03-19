@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Base, Aircraft } from "@/types/game";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -113,6 +114,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome, overdueAircraft
   const [hoveredAc, setHoveredAc] = useState<string | null>(null);
   const [selectedAcId, setSelectedAcId] = useState<string | null>(null);
   const [utfallAcId, setUtfallAcId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Pointer-event drag state (SVG-native, no HTML drag API)
   const svgRef = useRef<SVGSVGElement>(null);
@@ -847,6 +849,31 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome, overdueAircraft
                         }}
                       >
                         🎲 UTFALL-CHECK
+                      </button>
+
+                      {/* Dashboard link */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigate(`/aircraft/${ac.tailNumber}`); }}
+                        style={{
+                          width: "100%",
+                          padding: "5px 8px",
+                          background: "#0C234C",
+                          color: "#D7DEE1",
+                          border: "1px solid rgba(215,222,225,0.3)",
+                          borderRadius: "5px",
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: "8px",
+                          fontWeight: "900",
+                          cursor: "pointer",
+                          letterSpacing: "1px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px",
+                          marginTop: "4px",
+                        }}
+                      >
+                        📊 AIRCRAFT DASHBOARD →
                       </button>
 
                     </div>
