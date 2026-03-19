@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LineChart, Line, AreaChart, Area,
@@ -790,6 +790,7 @@ type DashTab = "oversikt" | "system" | "vapen" | "operationer" | "anmarkningar";
 export default function AircraftDashboard() {
   const { tailNumber } = useParams<{ tailNumber: string }>();
   const { state } = useGame();
+  const navigate = useNavigate();
 
   const aircraft = state.bases.flatMap((b) => b.aircraft).find((a) => a.tailNumber === tailNumber);
 
@@ -1429,6 +1430,74 @@ export default function AircraftDashboard() {
                     </div>
                   )}
                 </div>
+
+                {/* ── HÄNDELSEHISTORIK ── */}
+                {(() => {
+                  const acEvents = state.events
+                    .filter((e) => e.aircraftId === ac.tailNumber)
+                    .reverse()
+                    .slice(0, 8);
+
+                  const riskDot = (risk?: string) =>
+                    risk === "catastrophic" || risk === "high" ? "#D9192E"
+                    : risk === "medium" ? "#f59e0b"
+                    : "#22c55e";
+
+                  const actionLabel = (type?: string) => {
+                    const labels: Record<string, string> = {
+                      MISSION_DISPATCH: "UPPDRAG", MAINTENANCE_START: "UNDERHÅLL",
+                      MAINTENANCE_PAUSE: "PAUSE", UTFALL_APPLIED: "UTFALL",
+                      FAULT_NMC: "NMC", LANDING_RECEIVED: "LANDNING",
+                      SPARE_PART_USED: "RESERVDEL", HANGAR_CONFIRM: "HANGAR",
+                    };
+                    return type ? labels[type] ?? type : "";
+                  };
+
+                  return (
+                    <div className="space-y-3 mt-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#D7DEE1]/40">HÄNDELSEHISTORIK</span>
+                          <div className="flex-1 h-px" style={{ background: "rgba(215,222,225,0.08)", width: 80 }} />
+                        </div>
+                        <button
+                          onClick={() => navigate("/aar")}
+                          className="text-[9px] font-mono text-[#D7DEE1]/40 hover:text-[#D7DEE1]/70 transition-colors"
+                        >
+                          Visa alla →
+                        </button>
+                      </div>
+
+                      {acEvents.length === 0 ? (
+                        <div className="text-[11px] font-mono text-[#D7DEE1]/30 py-4">
+                          Inga registrerade händelser för detta flygplan.
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {acEvents.map((evt) => (
+                            <div key={evt.id} className="flex items-center gap-3 px-3 py-2 rounded-lg"
+                              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(215,222,225,0.07)" }}>
+                              <div className="w-2 h-2 rounded-full flex-shrink-0"
+                                style={{ background: riskDot(evt.riskLevel) }} />
+                              <span className="text-[9px] font-mono flex-shrink-0" style={{ color: "rgba(215,222,225,0.35)", fontFamily: "monospace" }}>
+                                {evt.timestamp}
+                              </span>
+                              {evt.actionType && (
+                                <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0"
+                                  style={{ background: "rgba(215,222,225,0.08)", color: "rgba(215,222,225,0.5)" }}>
+                                  {actionLabel(evt.actionType)}
+                                </span>
+                              )}
+                              <span className="text-[10px] font-mono truncate flex-1" style={{ color: "#D7DEE1" }}>
+                                {evt.message}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

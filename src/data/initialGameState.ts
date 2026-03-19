@@ -1,4 +1,4 @@
-import { GameState, Base, Aircraft, SparePartStock, PersonnelGroup, ATOOrder, BaseZone, AircraftType } from "@/types/game";
+import { GameState, Base, Aircraft, SparePartStock, PersonnelGroup, ATOOrder, BaseZone, AircraftType, GameEvent } from "@/types/game";
 import { ZONE_CAPACITIES } from "@/data/config/capacities";
 
 const createSpareParts = (): SparePartStock[] => [
@@ -321,13 +321,8 @@ export const initialGameState: GameState = {
   failedMissions: 0,
   atoOrders: initialATOOrders,
   events: [
-    {
-      id: "init",
-      timestamp: "Dag 1 06:00",
-      type: "info",
-      message: "Systemet initierat. ATO mottagen. Fredstillstånd.",
-    },
-  ],
+    { id: "init", timestamp: "Dag 1 06:00", type: "info", message: "Systemet initierat. ATO mottagen. Fredstillstånd." },
+  ] as GameEvent[],
   turnPhase: "InitializeState",
   turnNumber: 1,
   recommendations: [],

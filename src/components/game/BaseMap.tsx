@@ -121,6 +121,9 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome, overdueAircraft
   const [draggingAcId, setDraggingAcId] = useState<string | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const [dropZoneHover, setDropZoneHover] = useState<DropZone | null>(null);
+  const dragStartClient = useRef<{ x: number; y: number } | null>(null);
+  const dragThresholdMet = useRef(false);
+  const pendingDragAcId = useRef<string | null>(null);
 
   const mc = base.aircraft.filter((a) => a.status === "ready");
   const nmc = base.aircraft.filter((a) => a.status === "unavailable");
@@ -147,24 +150,51 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome, overdueAircraft
     };
   }
 
+  const DRAG_THRESHOLD = 6; // px movement before considered a drag
+
   function handleSVGPointerMove(e: React.PointerEvent<SVGSVGElement>) {
-    if (!draggingAcId) return;
+    if (!pendingDragAcId.current) return;
+    // Check if threshold met to start actual drag
+    if (!dragThresholdMet.current && dragStartClient.current) {
+      const dx = e.clientX - dragStartClient.current.x;
+      const dy = e.clientY - dragStartClient.current.y;
+      if (Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
+      dragThresholdMet.current = true;
+      setDraggingAcId(pendingDragAcId.current);
+    }
+    if (!draggingAcId && !dragThresholdMet.current) return;
     const pos = screenToSVG(e.clientX, e.clientY);
     setDragPos(pos);
     setDropZoneHover(getZoneAt(pos.x, pos.y));
   }
 
   function handleSVGPointerUp(e: React.PointerEvent<SVGSVGElement>) {
-    if (!draggingAcId) return;
-    const pos = screenToSVG(e.clientX, e.clientY);
-    const zone = getZoneAt(pos.x, pos.y);
-    if (zone) onDropAircraft(draggingAcId, zone);
+    const acId = pendingDragAcId.current;
+    const wasDrag = dragThresholdMet.current;
+    // Reset all drag state
+    pendingDragAcId.current = null;
+    dragStartClient.current = null;
+    dragThresholdMet.current = false;
     setDraggingAcId(null);
     setDragPos(null);
     setDropZoneHover(null);
+    if (!acId) return;
+    if (wasDrag) {
+      // It was a real drag — handle drop
+      const pos = screenToSVG(e.clientX, e.clientY);
+      const zone = getZoneAt(pos.x, pos.y);
+      if (zone) onDropAircraft(acId, zone);
+    } else {
+      // It was a click — navigate to aircraft dashboard
+      const ac = base.aircraft.find((a) => a.id === acId);
+      if (ac) navigate(`/aircraft/${ac.tailNumber}`);
+    }
   }
 
   function cancelDrag() {
+    pendingDragAcId.current = null;
+    dragStartClient.current = null;
+    dragThresholdMet.current = false;
     setDraggingAcId(null);
     setDragPos(null);
     setDropZoneHover(null);
@@ -282,12 +312,13 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome, overdueAircraft
                 style={{ cursor: draggingAcId === ac.id ? "grabbing" : isSelAc ? "pointer" : "grab" }}
                 onMouseEnter={() => { if (!draggingAcId) setHoveredAc(ac.id); }}
                 onMouseLeave={() => setHoveredAc(null)}
-                onClick={(e) => { if (!draggingAcId) { e.stopPropagation(); selectAircraft(ac.id); } }}
                 onPointerDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   svgRef.current?.setPointerCapture(e.pointerId);
-                  setDraggingAcId(ac.id);
+                  pendingDragAcId.current = ac.id;
+                  dragStartClient.current = { x: e.clientX, y: e.clientY };
+                  dragThresholdMet.current = false;
                   setSelectedAcId(null);
                   const pos = screenToSVG(e.clientX, e.clientY);
                   setDragPos(pos);

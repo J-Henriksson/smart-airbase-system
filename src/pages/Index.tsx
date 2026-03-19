@@ -12,10 +12,10 @@ import { StatusKort } from "@/components/dashboard/StatusKort";
 import { LarmPanel } from "@/components/dashboard/LarmPanel";
 import { DagensMissioner } from "@/components/dashboard/DagensMissioner";
 import { FlygschemaTidslinje } from "@/components/dashboard/FlygschemaTidslinje";
+import { RemainingLifeGraf } from "@/components/dashboard/RemainingLifeGraf";
 import { ResursPanel } from "@/components/dashboard/ResursPanel";
 import { ResursPage } from "@/components/dashboard/ResursPage";
 import { IntelligenceSidebar } from "@/components/dashboard/IntelligenceSidebar";
-import { RemainingLifeGraf } from "@/components/dashboard/RemainingLifeGraf";
 import { BaseMap, DropZone } from "@/components/game/BaseMap";
 import { LandingReceptionModal } from "@/components/game/LandingReceptionModal";
 import { RunwayCheckModal } from "@/components/game/RunwayCheckModal";
@@ -28,7 +28,7 @@ import { BaseType } from "@/types/game";
 import {
   ShieldCheck, Crosshair, Hammer, Siren, Clock,
   MapPin, PlaneTakeoff, ChevronRight, BarChart3, BookOpen,
-  Activity, AlertOctagon, Plane, Wrench,
+  Activity, AlertOctagon, Plane, Wrench, ClipboardList,
 } from "lucide-react";
 
 // ─── Section type ─────────────────────────────────────────────────────────────
@@ -284,6 +284,27 @@ const Index = () => {
             })}
           </div>
 
+          {/* ── AAR button ── */}
+          <div className="px-3 pb-1 pt-1 border-t" style={{ borderColor: "hsl(215 14% 88%)" }}>
+            <button
+              onClick={() => navigate("/fleet-analytics")}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-left rounded-lg text-xs font-medium transition-all hover:bg-muted/60"
+              style={{ color: "hsl(218 15% 45%)" }}
+            >
+              <Activity className="h-4 w-4" />
+              Flottanalys
+            </button>
+            <button
+              onClick={() => navigate("/aar")}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all border-l-2 rounded-lg hover:bg-black/5"
+              style={{ borderLeftColor: "transparent", color: "hsl(218 15% 50%)" }}
+            >
+              <ClipboardList className="h-4 w-4 flex-shrink-0" />
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wide flex-1">AAR Logg</span>
+              <ChevronRight className="h-2.5 w-2.5 opacity-30 flex-shrink-0" />
+            </button>
+          </div>
+
           {/* ── Fleet list ── */}
           <div className="flex-1 overflow-y-auto border-t" style={{ borderColor: "hsl(215 14% 88%)" }}>
             <div className="px-3 pt-2.5 pb-1">
@@ -488,6 +509,11 @@ const Index = () => {
                     />
                   </Panel>
 
+                  {/* Remaining Life & Recommendations — current base */}
+                  <Panel title={`Remaining Life & Rekommendationer — ${selectedBase.name}`} icon={BarChart3}>
+                    <RemainingLifeGraf bases={[selectedBase]} phase={state.phase} />
+                  </Panel>
+
                   {/* Turn tracker + Phase panel */}
                   <TurnPhaseTracker
                     currentPhase={state.turnPhase}
@@ -516,13 +542,7 @@ const Index = () => {
 
               {/* ──── HANGAR ──── */}
               {activeSection === "maintenance" && (
-                <>
-                  <MaintenanceBays base={selectedBase} onDropAircraft={handleDropAircraft} />
-
-                  <Panel title={`Remaining Life & Service — ${selectedBase.name}`} icon={BarChart3}>
-                    <RemainingLifeGraf bases={[selectedBase]} phase={state.phase} />
-                  </Panel>
-                </>
+                <MaintenanceBays base={selectedBase} onDropAircraft={handleDropAircraft} />
               )}
 
               {/* ──── PLANERING ──── */}

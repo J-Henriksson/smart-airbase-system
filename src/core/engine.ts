@@ -1,4 +1,4 @@
-import type { GameState, GameAction, GameEvent, AircraftStatus, MissionType } from "@/types/game";
+import type { GameState, GameAction, GameEvent, AircraftStatus, MissionType, RiskLevel } from "@/types/game";
 import { isMissionCapable } from "@/types/game";
 import { initialGameState } from "@/data/initialGameState";
 import { PHASE_ORDER, getNextPhase, isLastPhase, getPhaseDefinition } from "@/data/config/phases";
@@ -6,6 +6,13 @@ import { MAINTENANCE_CREW_PER_AIRCRAFT } from "@/data/config/capacities";
 import { handlePhase } from "./phases";
 import { validateAction } from "./validators";
 import { uuid } from "./uuid";
+
+function assessRisk(health: number): RiskLevel {
+  if (health < 20) return "catastrophic";
+  if (health < 40) return "high";
+  if (health < 60) return "medium";
+  return "low";
+}
 
 function addEvent(state: GameState, event: Omit<GameEvent, "id" | "timestamp">): GameState {
   return {
@@ -17,7 +24,7 @@ function addEvent(state: GameState, event: Omit<GameEvent, "id" | "timestamp">):
         timestamp: `Dag ${state.day} ${String(state.hour).padStart(2, "0")}:00`,
       },
       ...state.events,
-    ].slice(0, 50),
+    ].slice(0, 200),
   };
 }
 
@@ -204,11 +211,12 @@ function handleDispatchOrder(state: GameState, orderId: string): GameState {
     atoOrders: state.atoOrders.map((o) =>
       o.id === orderId ? { ...o, status: "dispatched" as const } : o
     ),
-    events: [newEvent, ...state.events].slice(0, 50),
+    events: [newEvent, ...state.events].slice(0, 200),
   };
 }
 
 function handleStartMaintenance(state: GameState, baseId: string, aircraftId: string): GameState {
+  const tail = state.bases.find((b) => b.id === baseId)?.aircraft.find((a) => a.id === aircraftId)?.tailNumber ?? aircraftId;
   const updatedBases = state.bases.map((base) => {
     if (base.id !== baseId) return base;
     const aircraft = base.aircraft.map((ac) => {
@@ -225,26 +233,38 @@ function handleStartMaintenance(state: GameState, baseId: string, aircraftId: st
 
   return addEvent({ ...state, bases: updatedBases }, {
     type: "info",
-    message: `Underhåll påbörjat på ${aircraftId}`,
+    message: `Underhåll påbörjat på ${tail}`,
     base: baseId,
+    aircraftId: tail,
+    actionType: "MAINTENANCE_START",
+    riskLevel: "low",
+    resourceImpact: "Underhållsbay reserverad",
   });
 }
 
 function handleSendMissionDrop(state: GameState, baseId: string, aircraftId: string, missionType: MissionType, durationHours?: number): GameState {
   const endHour = durationHours ? state.hour + durationHours : undefined;
+  const aircraft = state.bases.find((b) => b.id === baseId)?.aircraft.find((a) => a.id === aircraftId);
+  const tail = aircraft?.tailNumber ?? aircraftId;
   const updatedBases = state.bases.map((base) => {
     if (base.id !== baseId) return base;
-    const aircraft = base.aircraft.map((ac) => {
+    const acList = base.aircraft.map((ac) => {
       if (ac.id !== aircraftId || !isMissionCapable(ac.status)) return ac;
       return { ...ac, status: "on_mission" as AircraftStatus, currentMission: missionType, missionEndHour: endHour };
     });
-    return { ...base, aircraft };
+    return { ...base, aircraft: acList };
   });
 
   return addEvent({ ...state, bases: updatedBases }, {
     type: "success",
-    message: `${aircraftId} skickad på ${missionType}-uppdrag via drag-drop`,
+    message: `${tail} skickad på ${missionType}-uppdrag`,
     base: baseId,
+    aircraftId: tail,
+    actionType: "MISSION_DISPATCH",
+    riskLevel: assessRisk(aircraft?.health ?? 100),
+    healthAtDecision: aircraft?.health,
+    resourceImpact: `${missionType}-uppdrag${durationHours ? ` ${durationHours}h` : ""}`,
+    decisionContext: "Uppdragsdispatch",
   });
 }
 
@@ -280,10 +300,14 @@ function handleCompleteLandingCheck(
     };
   });
 
+  const landTail = state.bases.find((b) => b.id === baseId)?.aircraft.find((a) => a.id === aircraftId)?.tailNumber ?? aircraftId;
   return addEvent({ ...state, bases: updatedBases, pendingLandingChecks: updatedLandingChecks }, {
     type: "success",
-    message: `${aircraftId} landad och godkänd — återvänder till uppställningsplats`,
+    message: `${landTail} landad och godkänd — återvänder till uppställningsplats`,
     base: baseId as any,
+    aircraftId: landTail,
+    actionType: "LANDING_RECEIVED",
+    riskLevel: "low",
   });
 }
 
@@ -341,11 +365,18 @@ function handleApplyUtfall(
     };
   });
 
+  const utfallTail = state.bases.find((b) => b.id === baseId)?.aircraft.find((a) => a.id === aircraftId)?.tailNumber ?? aircraftId;
   const partNote = consumedPartName ? ` — reservdel använd: ${consumedPartName}` : "";
+  const utfallRisk: RiskLevel = repairTime > 8 ? "catastrophic" : repairTime > 4 ? "high" : repairTime > 2 ? "medium" : "low";
   return addEvent({ ...state, bases: updatedBases }, {
-    type: "warning",
-    message: `UTFALL: ${aircraftId} — ${actionLabel} — ${repairTime}h underhåll (Vapensystemsförlust ${weaponLoss}%)${partNote}`,
+    type: utfallRisk === "catastrophic" ? "critical" : "warning",
+    message: `UTFALL: ${utfallTail} — ${actionLabel} — ${repairTime}h underhåll (Vapensystemsförlust ${weaponLoss}%)${partNote}`,
     base: baseId,
+    aircraftId: utfallTail,
+    actionType: "UTFALL_APPLIED",
+    riskLevel: utfallRisk,
+    resourceImpact: `${repairTime}h underhåll`,
+    decisionContext: utfallRisk === "catastrophic" ? "Katastrofalt fel — varningar ignorerades" : actionLabel,
   });
 }
 
@@ -398,12 +429,18 @@ function handleHangarDropConfirm(
     };
   });
 
+  const hangarTail = state.bases.find((b) => b.id === baseId)?.aircraft.find((a) => a.id === aircraftId)?.tailNumber ?? aircraftId;
   const label = restoreHealth ? "Förebyggande underhåll" : "Felsökning/Reparation";
   const partNote = consumedPartName ? ` — reservdel använd: ${consumedPartName}` : "";
   return addEvent({ ...state, bases: updatedBases }, {
     type: "info",
-    message: `🔧 ${aircraftId} — ${label} (${repairTime}h) påbörjat${partNote}`,
+    message: `${hangarTail} → ${label} (${repairTime}h) påbörjat${partNote}`,
     base: baseId,
+    aircraftId: hangarTail,
+    actionType: "HANGAR_CONFIRM",
+    riskLevel: "low",
+    resourceImpact: `${repairTime}h underhåll`,
+    decisionContext: label,
   });
 }
 
@@ -435,10 +472,16 @@ function handleMarkFaultNMC(
     };
   });
 
+  const nmcTail = state.bases.find((b) => b.id === baseId)?.aircraft.find((a) => a.id === aircraftId)?.tailNumber ?? aircraftId;
   return addEvent({ ...state, bases: updatedBases }, {
     type: "warning",
-    message: `🔴 ${aircraftId} NMC — ${actionLabel} (${repairTime}h) — ej i hangar`,
+    message: `${nmcTail} NMC — ${actionLabel} (${repairTime}h) — ej i hangar`,
     base: baseId,
+    aircraftId: nmcTail,
+    actionType: "FAULT_NMC",
+    riskLevel: "high",
+    resourceImpact: "Plan NMC — inväntar hangarplats",
+    decisionContext: actionLabel,
   });
 }
 
@@ -464,10 +507,16 @@ function handlePauseMaintenance(state: GameState, baseId: string, aircraftId: st
     };
   });
 
+  const pauseTail = state.bases.find((b) => b.id === baseId)?.aircraft.find((a) => a.id === aircraftId)?.tailNumber ?? aircraftId;
   return addEvent({ ...state, bases: updatedBases }, {
     type: "warning",
-    message: `Underhåll pausat på ${aircraftId} — arbetet återupptas manuellt`,
+    message: `Underhåll pausat på ${pauseTail} — arbetet återupptas manuellt`,
     base: baseId,
+    aircraftId: pauseTail,
+    actionType: "MAINTENANCE_PAUSE",
+    riskLevel: "medium",
+    resourceImpact: "Underhållsbay frigjord",
+    decisionContext: "Underhåll avbrutet manuellt",
   });
 }
 
@@ -488,5 +537,8 @@ function handleConsumeSparePart(state: GameState, baseId: string, sparePartId: s
     type: "info",
     message: `Reservdel använd: ${part?.name ?? sparePartId} (−${quantity}) vid ${baseId}`,
     base: baseId,
+    actionType: "SPARE_PART_USED",
+    riskLevel: "low",
+    resourceImpact: `${part?.name ?? sparePartId} ×${quantity}`,
   });
 }

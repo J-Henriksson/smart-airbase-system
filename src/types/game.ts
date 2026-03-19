@@ -246,12 +246,31 @@ export interface GameState {
   pendingLandingChecks: { aircraftId: string; baseId: BaseType }[];
 }
 
+export type AARActionType =
+  | "MISSION_DISPATCH"
+  | "MAINTENANCE_START"
+  | "MAINTENANCE_PAUSE"
+  | "LANDING_RECEIVED"
+  | "UTFALL_APPLIED"
+  | "SPARE_PART_USED"
+  | "FAULT_NMC"
+  | "HANGAR_CONFIRM";
+
+export type RiskLevel = "low" | "medium" | "high" | "catastrophic";
+
 export interface GameEvent {
   id: string;
   timestamp: string;
   type: "info" | "warning" | "critical" | "success";
   message: string;
   base?: BaseType;
+  // AAR fields
+  aircraftId?: string;
+  actionType?: AARActionType;
+  riskLevel?: RiskLevel;
+  healthAtDecision?: number;
+  resourceImpact?: string;
+  decisionContext?: string;
 }
 
 export interface ATOOrder {
