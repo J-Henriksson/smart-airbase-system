@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGame } from "@/context/GameContext";
 import { TopBar } from "@/components/game/TopBar";
-import { MissionSchedule } from "@/components/game/MissionSchedule";
 import { MaintenanceBays } from "@/components/game/MaintenanceBays";
 import { TurnPhaseTracker } from "@/components/game/TurnPhaseTracker";
 import { PhasePanel } from "@/components/game/PhasePanel";
@@ -15,6 +14,9 @@ import { FlygschemaTidslinje } from "@/components/dashboard/FlygschemaTidslinje"
 import { RemainingLifeGraf } from "@/components/dashboard/RemainingLifeGraf";
 import { ResursPanel } from "@/components/dashboard/ResursPanel";
 import { ResursPage } from "@/components/dashboard/ResursPage";
+import { ATOBody } from "./ATO";
+import FleetAnalyticsPage from "./FleetAnalyticsPage";
+import AARPage from "./AARPage";
 import { IntelligenceSidebar } from "@/components/dashboard/IntelligenceSidebar";
 import { BaseMap, DropZone } from "@/components/game/BaseMap";
 import { LandingReceptionModal } from "@/components/game/LandingReceptionModal";
@@ -32,7 +34,7 @@ import {
 } from "lucide-react";
 
 // ─── Section type ─────────────────────────────────────────────────────────────
-type Section = "base" | "missions" | "maintenance" | "planning" | "resources";
+type Section = "base" | "missions" | "maintenance" | "resources" | "ato" | "fleet" | "aar";
 
 // ─── Section panel wrapper ────────────────────────────────────────────────────
 function Panel({ title, icon: Icon, children }: {
@@ -158,12 +160,16 @@ const Index = () => {
     : null;
 
   // ─── Nav items ─────────────────────────────────────────────────────────────
+  const pendingATOCount = state.atoOrders.filter((o) => o.status === "pending").length;
+
   const navItems: { id: Section; label: string; Icon: React.ElementType; badge?: number; badgeColor?: string }[] = [
     { id: "base",        label: "Basöversikt",  Icon: MapPin,       badge: undefined },
     { id: "missions",    label: "Uppdrag",       Icon: Crosshair,    badge: onMissionTotal || undefined, badgeColor: "#3b82f6" },
     { id: "maintenance", label: "Hangar",        Icon: Hammer,       badge: inMaintTotal || undefined, badgeColor: inMaintTotal > 0 ? "#d97706" : "#22a05a" },
-    { id: "planning",    label: "Planering",     Icon: BookOpen,     badge: undefined },
     { id: "resources",   label: "Resurser",      Icon: BarChart3,    badge: kritiskaResurser || undefined, badgeColor: "#D9192E" },
+    { id: "ato",         label: "ATO Planering", Icon: BookOpen,     badge: pendingATOCount || undefined, badgeColor: "#D7AB3A" },
+    { id: "fleet",       label: "Flottanalys",   Icon: Activity,     badge: undefined },
+    { id: "aar",         label: "AAR Logg",      Icon: ClipboardList, badge: undefined },
   ];
 
   // ─── Aircraft status styling ───────────────────────────────────────────────
@@ -284,27 +290,6 @@ const Index = () => {
             })}
           </div>
 
-          {/* ── AAR button ── */}
-          <div className="px-3 pb-1 pt-1 border-t" style={{ borderColor: "hsl(215 14% 88%)" }}>
-            <button
-              onClick={() => navigate("/fleet-analytics")}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-left rounded-lg text-xs font-medium transition-all hover:bg-muted/60"
-              style={{ color: "hsl(218 15% 45%)" }}
-            >
-              <Activity className="h-4 w-4" />
-              Flottanalys
-            </button>
-            <button
-              onClick={() => navigate("/aar")}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all border-l-2 rounded-lg hover:bg-black/5"
-              style={{ borderLeftColor: "transparent", color: "hsl(218 15% 50%)" }}
-            >
-              <ClipboardList className="h-4 w-4 flex-shrink-0" />
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wide flex-1">AAR Logg</span>
-              <ChevronRight className="h-2.5 w-2.5 opacity-30 flex-shrink-0" />
-            </button>
-          </div>
-
           {/* ── Fleet list ── */}
           <div className="flex-1 overflow-y-auto border-t" style={{ borderColor: "hsl(215 14% 88%)" }}>
             <div className="px-3 pt-2.5 pb-1">
@@ -349,7 +334,10 @@ const Index = () => {
         </nav>
 
         {/* ── MAIN CONTENT ── */}
-        <div className="flex-1 overflow-y-auto" style={{ background: "hsl(0 0% 100%)" }}>
+        {activeSection === "ato" ? (
+          <ATOBody embedded />
+        ) : (
+        <div className="flex-1 overflow-y-auto" style={{ background: activeSection === "fleet" || activeSection === "aar" ? "#0C234C" : "hsl(0 0% 100%)" }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSection}
@@ -357,7 +345,7 @@ const Index = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.16 }}
-              className="p-5 space-y-5"
+              className={activeSection === "fleet" || activeSection === "aar" ? "" : "p-5 space-y-5"}
             >
 
               {/* ──── BASÖVERSIKT ──── */}
@@ -545,22 +533,30 @@ const Index = () => {
                 <MaintenanceBays base={selectedBase} onDropAircraft={handleDropAircraft} />
               )}
 
-              {/* ──── PLANERING ──── */}
-              {activeSection === "planning" && (
-                <MissionSchedule atoOrders={state.atoOrders} day={state.day} hour={state.hour} />
-              )}
-
               {/* ──── RESURSER ──── */}
               {activeSection === "resources" && (
                 <ResursPage base={selectedBase} phase={state.phase} />
               )}
 
+              {/* ──── FLEET ANALYTICS ──── */}
+              {activeSection === "fleet" && (
+                <FleetAnalyticsPage embedded />
+              )}
+
+              {/* ──── AAR LOGG ──── */}
+              {activeSection === "aar" && (
+                <AARPage embedded />
+              )}
+
             </motion.div>
           </AnimatePresence>
         </div>
+        )}
 
         {/* ── RIGHT SIDEBAR — Intelligence Sidebar ── */}
-        <IntelligenceSidebar base={selectedBase} phase={state.phase} />
+        {activeSection !== "ato" && (
+          <IntelligenceSidebar base={selectedBase} phase={state.phase} />
+        )}
 
       </div>
 

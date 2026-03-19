@@ -78,6 +78,23 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "CONSUME_SPARE_PART":
       return handleConsumeSparePart(state, action.baseId, action.sparePartId, action.quantity ?? 1);
 
+    case "IMPORT_ATO_BATCH": {
+      const newOrders = action.orders.map(order => ({
+        ...order,
+        id: `ato-import-${uuid().slice(0, 8)}`,
+        status: "pending" as const,
+        assignedAircraft: [],
+      }));
+      const riskNote = action.riskCount > 0 ? ` ⚠ ${action.riskCount} uppdrag flaggade som RISK.` : "";
+      return addEvent(
+        { ...state, atoOrders: [...state.atoOrders, ...newOrders] },
+        {
+          type: "info",
+          message: `ATO mottagen från "${action.sourceFile}": ${newOrders.length} nya uppdrag schemalagda.${riskNote}`,
+        }
+      );
+    }
+
     case "MOVE_AIRCRAFT":
       return state; // TODO: implement zone-based movement
 

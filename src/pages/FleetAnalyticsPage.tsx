@@ -277,7 +277,7 @@ function BeslutloggPanel({ events, navigate }: BeslutloggProps) {
 
 // ─── Main FleetAnalyticsPage ──────────────────────────────────────────────────
 
-export default function FleetAnalyticsPage() {
+export default function FleetAnalyticsPage({ embedded = false }: { embedded?: boolean }) {
   const { state } = useGame();
   const navigate  = useNavigate();
   const [selectedBaseId, setSelectedBaseId] = useState<string>(state.bases[0]?.id ?? "MOB");
@@ -309,37 +309,36 @@ export default function FleetAnalyticsPage() {
   ).length;
 
   return (
-    <div className="min-h-screen font-mono" style={{ background: DEEP_BLUE, color: SILVER }}>
+    <div className={embedded ? "font-mono min-h-full" : "min-h-screen font-mono"} style={{ background: DEEP_BLUE, color: SILVER }}>
 
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-6 py-4 border-b"
-        style={{ borderColor: "rgba(215,222,225,0.1)" }}
-      >
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-xs font-mono hover:opacity-70 transition-opacity"
-            style={{ color: "rgba(215,222,225,0.6)" }}
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            DASHBOARD
-          </button>
-          <div className="h-4 w-px" style={{ background: "rgba(215,222,225,0.2)" }} />
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4" style={{ color: AMBER }} />
-            <span
-              className="text-sm font-mono font-bold tracking-wider"
-              style={{ color: SILVER }}
+      {/* Header — only in standalone mode */}
+      {!embedded && (
+        <div
+          className="flex items-center justify-between px-6 py-4 border-b"
+          style={{ borderColor: "rgba(215,222,225,0.1)" }}
+        >
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/")}
+              className="flex items-center gap-2 text-xs font-mono hover:opacity-70 transition-opacity"
+              style={{ color: "rgba(215,222,225,0.6)" }}
             >
-              FLEET ANALYTICS — FLOTTÖVERSIKT
-            </span>
+              <ArrowLeft className="h-3.5 w-3.5" />
+              DASHBOARD
+            </button>
+            <div className="h-4 w-px" style={{ background: "rgba(215,222,225,0.2)" }} />
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4" style={{ color: AMBER }} />
+              <span className="text-sm font-mono font-bold tracking-wider" style={{ color: SILVER }}>
+                FLEET ANALYTICS — FLOTTÖVERSIKT
+              </span>
+            </div>
           </div>
+          <span className="text-xs font-mono" style={{ color: "rgba(215,222,225,0.5)" }}>
+            Dag {state.day} · {String(state.hour).padStart(2, "0")}:00 · {state.phase}
+          </span>
         </div>
-        <span className="text-xs font-mono" style={{ color: "rgba(215,222,225,0.5)" }}>
-          Dag {state.day} · {String(state.hour).padStart(2, "0")}:00 · {state.phase}
-        </span>
-      </div>
+      )}
 
       <div className="p-6 space-y-6">
 

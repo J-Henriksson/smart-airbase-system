@@ -3,6 +3,7 @@ import { useGame } from "@/context/GameContext";
 import { TopBar } from "@/components/game/TopBar";
 import { ATOEditor } from "@/components/game/ATOEditor";
 import { ATOMissionPanel } from "@/components/game/ATOMissionPanel";
+import { ATOImporter } from "@/components/game/ATOImporter";
 import { ATOOrder, Aircraft, MissionType } from "@/types/game";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -61,7 +62,7 @@ function formatHour(h: number) {
   return `${String(h).padStart(2, "0")}:00`;
 }
 
-export default function ATO() {
+export function ATOBody({ embedded = false }: { embedded?: boolean }) {
   const { state, advanceTurn, resetGame, assignAircraftToOrder, dispatchOrder, createATOOrder, editATOOrder, deleteATOOrder } = useGame();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedAircraft, setSelectedAircraft] = useState<string[]>([]);
@@ -145,8 +146,8 @@ export default function ATO() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <TopBar state={state} onAdvanceTurn={advanceTurn} onReset={resetGame} />
+    <div className={embedded ? "flex flex-col flex-1 overflow-hidden bg-background" : "flex flex-col h-screen bg-background"}>
+      {!embedded && <TopBar state={state} onAdvanceTurn={advanceTurn} onReset={resetGame} />}
 
       {/* Sub-header */}
       <div className="border-b border-border bg-card px-6 py-2.5 flex items-center justify-between">
@@ -182,10 +183,17 @@ export default function ATO() {
         </div>
       </div>
 
+      {/* ATO Importer — inline panel */}
+      <div className="border-b border-border bg-card overflow-y-auto" style={{ maxHeight: "320px" }}>
+        <div className="px-6 py-4">
+          <ATOImporter />
+        </div>
+      </div>
+
       {/* Main content */}
       <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-0">
 
-        {/* LEFT: ATO order list */}
+        {/* LEFT: ATO order list + importer */}
         <div className="border-r border-border flex flex-col overflow-hidden">
           {/* Filter tabs */}
           <div className="px-4 py-2 border-b border-border flex gap-1">
@@ -408,4 +416,8 @@ export default function ATO() {
       )}
     </div>
   );
+}
+
+export default function ATO() {
+  return <ATOBody />;
 }

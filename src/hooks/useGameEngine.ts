@@ -1,5 +1,5 @@
 import { useReducer, useCallback, useMemo } from "react";
-import type { GameState, GameAction, BaseType, MissionType } from "@/types/game";
+import type { GameState, GameAction, BaseType, MissionType, ATOOrder } from "@/types/game";
 import { isMissionCapable } from "@/types/game";
 import { gameReducer } from "@/core/engine";
 import { initialGameState } from "@/data/initialGameState";
@@ -7,6 +7,7 @@ import { initialGameState } from "@/data/initialGameState";
 export interface GameEngine {
   state: GameState;
   dispatch: (action: GameAction) => void;
+  importATOBatch: (orders: Omit<ATOOrder, "id" | "status" | "assignedAircraft">[], sourceFile: string, riskCount: number) => void;
 
   // Convenience dispatchers matching old useGameState API
   advanceTurn: () => void;
@@ -121,6 +122,14 @@ export function useGameEngine(): GameEngine {
     dispatch({ type: "CONSUME_SPARE_PART", baseId: baseId as BaseType, sparePartId, quantity });
   }, []);
 
+  const importATOBatch = useCallback((
+    orders: Omit<ATOOrder, "id" | "status" | "assignedAircraft">[],
+    sourceFile: string,
+    riskCount: number,
+  ) => {
+    dispatch({ type: "IMPORT_ATO_BATCH", orders, sourceFile, riskCount });
+  }, []);
+
   const getResourceSummary = useCallback((): string => {
     const lines: string[] = [];
     lines.push(`=== RESURSLÄGE DAG ${state.day} ${String(state.hour).padStart(2, "0")}:00 - FAS: ${state.phase} ===\n`);
@@ -164,13 +173,13 @@ export function useGameEngine(): GameEngine {
     applyUtfallOutcome, completeLandingCheck, resetGame, getResourceSummary,
     createATOOrder, editATOOrder, deleteATOOrder,
     applyRecommendation, dismissRecommendation, hangarDropConfirm, pauseMaintenance, markFaultNMC,
-    consumeSparePart,
+    consumeSparePart, importATOBatch,
   }), [
     state, advanceTurn, startMaintenance, sendOnMission, assignAircraftToOrder,
     dispatchOrder, moveAircraftToMaintenance, sendMissionDrop,
     applyUtfallOutcome, completeLandingCheck, resetGame, getResourceSummary,
     createATOOrder, editATOOrder, deleteATOOrder,
     applyRecommendation, dismissRecommendation, hangarDropConfirm, pauseMaintenance, markFaultNMC,
-    consumeSparePart,
+    consumeSparePart, importATOBatch,
   ]);
 }

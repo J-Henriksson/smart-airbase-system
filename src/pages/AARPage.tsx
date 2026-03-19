@@ -224,7 +224,7 @@ function BarRow({ label, value, max, color }: { label: string; value: number; ma
 
 // ─── Main AARPage ─────────────────────────────────────────────────────────────
 
-export default function AARPage() {
+export default function AARPage({ embedded = false }: { embedded?: boolean }) {
   const { state } = useGame();
   const navigate  = useNavigate();
 
@@ -274,31 +274,33 @@ export default function AARPage() {
   const headerTimestamp = `Dag ${state.day} ${String(state.hour).padStart(2, "0")}:00Z`;
 
   return (
-    <div className="min-h-screen font-mono flex flex-col" style={{ background: DEEP_BLUE, color: SILVER }}>
+    <div className={embedded ? "font-mono flex flex-col min-h-full" : "min-h-screen font-mono flex flex-col"} style={{ background: DEEP_BLUE, color: SILVER }}>
 
-      {/* ── HEADER ── */}
-      <header className="px-6 py-5 border-b" style={{ borderColor: "rgba(215,222,225,0.1)", background: "rgba(0,0,0,0.25)" }}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div>
-            <div className="text-[9px] font-mono uppercase tracking-widest mb-1" style={{ color: "rgba(215,222,225,0.4)" }}>
-              Black Box — After Action Review
+      {/* ── HEADER — only in standalone mode ── */}
+      {!embedded && (
+        <header className="px-6 py-5 border-b" style={{ borderColor: "rgba(215,222,225,0.1)", background: "rgba(0,0,0,0.25)" }}>
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div>
+              <div className="text-[9px] font-mono uppercase tracking-widest mb-1" style={{ color: "rgba(215,222,225,0.4)" }}>
+                Black Box — After Action Review
+              </div>
+              <h1 className="text-2xl font-black tracking-tight" style={{ color: SILVER }}>
+                AAR — UPPDRAGSANALYS & HISTORIK
+              </h1>
+              <div className="text-[11px] font-mono mt-1" style={{ color: "rgba(215,222,225,0.5)" }}>
+                {currentBase?.name ?? "MOB"} · {headerTimestamp}
+              </div>
             </div>
-            <h1 className="text-2xl font-black tracking-tight" style={{ color: SILVER }}>
-              AAR — UPPDRAGSANALYS & HISTORIK
-            </h1>
-            <div className="text-[11px] font-mono mt-1" style={{ color: "rgba(215,222,225,0.5)" }}>
-              {currentBase?.name ?? "MOB"} · {headerTimestamp}
-            </div>
+            <button
+              onClick={() => navigate("/")}
+              className="text-[10px] font-mono font-bold px-4 py-2 rounded-lg border transition-all hover:brightness-110"
+              style={{ background: "rgba(255,255,255,0.06)", borderColor: "rgba(215,222,225,0.18)", color: SILVER }}
+            >
+              TILLBAKA →
+            </button>
           </div>
-          <button
-            onClick={() => navigate("/")}
-            className="text-[10px] font-mono font-bold px-4 py-2 rounded-lg border transition-all hover:brightness-110"
-            style={{ background: "rgba(255,255,255,0.06)", borderColor: "rgba(215,222,225,0.18)", color: SILVER }}
-          >
-            TILLBAKA →
-          </button>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* ── FILTER BAR ── */}
       <div className="px-6 py-4 border-b" style={{ borderColor: "rgba(215,222,225,0.08)", background: "rgba(0,0,0,0.15)" }}>
