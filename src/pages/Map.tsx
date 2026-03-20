@@ -185,6 +185,7 @@ export default function MapPage() {
                   aircraft={selectedAircraft}
                   onBack={() => setSelected({ kind: "base", baseId: selected.baseId })}
                   onRecall={handleRecall}
+                  currentHour={state.hour}
                 />
               ) : selectedBase ? (
                 <BaseDetailPanel
