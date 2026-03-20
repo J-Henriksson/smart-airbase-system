@@ -87,11 +87,27 @@ function ReadinessScoreBar({
         </div>
         <span
           className="text-[9px] font-mono font-bold px-3 py-1 rounded-full"
-          style={{
-            background: "rgba(217,25,46,0.15)",
-            border: "1px solid rgba(217,25,46,0.3)",
-            color: RED,
-          }}
+          style={(() => {
+            if (phase === "FRED") {
+              return {
+                background: "rgba(34,160,90,0.18)",
+                border: "1px solid rgba(34,160,90,0.35)",
+                color: "#22a05a",
+              };
+            }
+            if (phase === "KRIS") {
+              return {
+                background: "rgba(215,171,58,0.18)",
+                border: "1px solid rgba(215,171,58,0.35)",
+                color: AMBER,
+              };
+            }
+            return {
+              background: "rgba(217,25,46,0.15)",
+              border: "1px solid rgba(217,25,46,0.3)",
+              color: RED,
+            };
+          })()}
         >
           {phase}
         </span>
