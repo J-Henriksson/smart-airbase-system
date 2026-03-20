@@ -380,10 +380,22 @@ const Index = () => {
                         <span className="text-[9px] font-mono" style={{ color: "rgba(215,222,225,0.4)" }}>
                           T{state.turnNumber} · {String(state.hour).padStart(2,"0")}:00Z
                         </span>
-                        <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded"
-                          style={{ background: "rgba(217,25,46,0.15)", color: "#D9192E", border: "1px solid rgba(217,25,46,0.3)" }}>
-                          {state.phase}
-                        </span>
+                        {(() => {
+                          const phaseStyle =
+                            state.phase === "FRED"
+                              ? { bg: "rgba(34,160,90,0.18)", fg: "#22a05a", border: "1px solid rgba(34,160,90,0.35)" }
+                              : state.phase === "KRIS"
+                              ? { bg: "rgba(217,171,58,0.18)", fg: "#D7AB3A", border: "1px solid rgba(217,171,58,0.35)" }
+                              : { bg: "rgba(217,25,46,0.15)", fg: "#D9192E", border: "1px solid rgba(217,25,46,0.3)" };
+                          return (
+                            <span
+                              className="text-[9px] font-mono font-bold px-2 py-0.5 rounded"
+                              style={{ background: phaseStyle.bg, color: phaseStyle.fg, border: phaseStyle.border }}
+                            >
+                              {state.phase}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
 
