@@ -225,8 +225,8 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome, overdueAircraft
           onPointerUp={handleSVGPointerUp}
           onPointerLeave={cancelDrag}
         >
-          {/* ── Light silver background */}
-          <rect width="900" height="500" fill="#D7DEE1" />
+          {/* ── Background */}
+          <rect width="900" height="500" fill="transparent" />
 
           {/* Subtle tactical grid */}
           <defs>
