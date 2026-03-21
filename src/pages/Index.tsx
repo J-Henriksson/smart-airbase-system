@@ -167,7 +167,7 @@ const Index = () => {
     { id: "maintenance", label: "Hangar",        Icon: Hammer,       badge: inMaintTotal || undefined, badgeColor: inMaintTotal > 0 ? "#d97706" : "#22a05a" },
     { id: "resources",   label: "Resurser",      Icon: BarChart3,    badge: kritiskaResurser || undefined, badgeColor: "#D9192E" },
     { id: "ato",         label: "ATO Planering", Icon: BookOpen,     badge: pendingATOCount || undefined, badgeColor: "#D7AB3A" },
-    { id: "aar",         label: "AAR Logg",      Icon: ClipboardList, badge: undefined },
+    { id: "aar",         label: "Historik",      Icon: ClipboardList, badge: undefined },
   ];
 
   // ─── Aircraft status styling ───────────────────────────────────────────────
