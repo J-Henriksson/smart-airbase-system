@@ -4,13 +4,17 @@ import { Base } from "@/types/game";
 import { BASE_COORDS } from "./constants";
 import gripenSilhouette from "@/assets/gripen-silhouette.png";
 
+const REBASE_TRANSIT_HOURS = 2;
+const TRAIL_POINTS = 80;
+const TRAIL_SPAN = 8;
 
 interface AircraftPosition {
   id: string;
   baseId: string;
   lng: number;
   lat: number;
-  angle: number; // heading in degrees
+  angle: number;
+  isRebase?: boolean;
 }
 
 interface TrailPoint {
@@ -18,16 +22,15 @@ interface TrailPoint {
   lat: number;
 }
 
-const TRAIL_POINTS = 80; // sample points per trail
-const TRAIL_SPAN = 8; // phase-seconds the trail covers
-
 export function AircraftLayer({
   bases,
+  currentHour,
   onSelectAircraft,
   selectedAircraftId,
   onPositionUpdate,
 }: {
   bases: Base[];
+  currentHour?: number;
   onSelectAircraft?: (baseId: string, aircraftId: string) => void;
   selectedAircraftId?: string;
   onPositionUpdate?: (lng: number, lat: number) => void;
@@ -35,7 +38,6 @@ export function AircraftLayer({
   const { current: mapRef } = useMap();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Animate orbit phase
   const [phase, setPhase] = useState(0);
   useEffect(() => {
     let frame: number;
@@ -48,64 +50,98 @@ export function AircraftLayer({
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const { aircraftPositions, trails } = useMemo(() => {
+  const { aircraftPositions, orbitTrails, rebaseTrails } = useMemo(() => {
     const positions: AircraftPosition[] = [];
-    const allTrails: TrailPoint[][] = [];
+    const allOrbitTrails: TrailPoint[][] = [];
+    const allRebaseTrails: TrailPoint[][] = [];
 
     for (const base of bases) {
       const coords = BASE_COORDS[base.id];
       if (!coords) continue;
 
       const onMission = base.aircraft.filter((ac) => ac.status === "on_mission");
-      onMission.forEach((ac, idx) => {
-        const baseAngle = (idx * 137.5) % 360;
-        const orbitRadius = 0.35 + (idx % 3) * 0.15;
-        const orbitSpeed = 4.32 + (idx % 4) * 1.62;
-        const currentAngle = baseAngle + phase * orbitSpeed;
-        const rad = (currentAngle * Math.PI) / 180;
 
-        const destLng = coords.lng + Math.cos(rad) * orbitRadius;
-        const destLat = coords.lat + Math.sin(rad) * orbitRadius * 0.6;
+      let orbitIdx = 0;
+      for (const ac of onMission) {
+        const isRebase = ac.currentMission === "REBASE" && !!ac.rebaseTarget;
 
-        const vx = -Math.sin(rad);
-        const vy = -Math.cos(rad) * 0.6;
-        const headingDeg = Math.atan2(vy, vx) * (180 / Math.PI);
+        if (isRebase && ac.rebaseTarget) {
+          const destCoords = BASE_COORDS[ac.rebaseTarget];
+          if (!destCoords) continue;
 
-        positions.push({
-          id: ac.id,
-          baseId: base.id,
-          lng: destLng,
-          lat: destLat,
-          angle: headingDeg,
-        });
+          // Progress 0→1 from startHour to missionEndHour
+          const startHour = (ac.missionEndHour ?? 0) - REBASE_TRANSIT_HOURS;
+          const progress = Math.min(1, Math.max(0,
+            ((currentHour ?? 0) - startHour) / REBASE_TRANSIT_HOURS
+          ));
 
-        // Compute trail points stepping backwards in phase
-        const points: TrailPoint[] = [];
-        for (let i = 0; i < TRAIL_POINTS; i++) {
-          const t = (i / (TRAIL_POINTS - 1)) * TRAIL_SPAN;
-          const trailPhase = phase - t;
-          const trailAngle = baseAngle + trailPhase * orbitSpeed;
-          const trailRad = (trailAngle * Math.PI) / 180;
-          points.push({
-            lng: coords.lng + Math.cos(trailRad) * orbitRadius,
-            lat: coords.lat + Math.sin(trailRad) * orbitRadius * 0.6,
-          });
+          const lng = coords.lng + (destCoords.lng - coords.lng) * progress;
+          const lat = coords.lat + (destCoords.lat - coords.lat) * progress;
+
+          // Heading: match orbit convention — screen y is inverted vs lat, same 0.6 scale
+          const dLng = destCoords.lng - coords.lng;
+          const dLat = destCoords.lat - coords.lat;
+          const headingDeg = Math.atan2(-dLat * 0.6, dLng) * (180 / Math.PI);
+
+          positions.push({ id: ac.id, baseId: base.id, lng, lat, angle: headingDeg, isRebase: true });
+
+          // Trail: i=0 is the dim tail (farthest behind), i=N-1 is the bright head (at aircraft)
+          // Canvas draws opacity = 0.7*(frac) where frac=i/(N-1), so dim at i=0, bright at i=N-1.
+          const TRAIL_FRACTION = 0.2;
+          const trailTail = Math.max(0, progress - TRAIL_FRACTION);
+          const points: TrailPoint[] = [];
+          for (let i = 0; i < TRAIL_POINTS; i++) {
+            const t = trailTail + (progress - trailTail) * (i / (TRAIL_POINTS - 1));
+            points.push({
+              lng: coords.lng + (destCoords.lng - coords.lng) * t,
+              lat: coords.lat + (destCoords.lat - coords.lat) * t,
+            });
+          }
+          allRebaseTrails.push(points);
+        } else {
+          // Normal orbit
+          const idx = orbitIdx;
+          const baseAngle = (idx * 137.5) % 360;
+          const orbitRadius = 0.35 + (idx % 3) * 0.15;
+          const orbitSpeed = 4.32 + (idx % 4) * 1.62;
+          const currentAngle = baseAngle + phase * orbitSpeed;
+          const rad = (currentAngle * Math.PI) / 180;
+
+          const destLng = coords.lng + Math.cos(rad) * orbitRadius;
+          const destLat = coords.lat + Math.sin(rad) * orbitRadius * 0.6;
+
+          const vx = -Math.sin(rad);
+          const vy = -Math.cos(rad) * 0.6;
+          const headingDeg = Math.atan2(vy, vx) * (180 / Math.PI);
+
+          positions.push({ id: ac.id, baseId: base.id, lng: destLng, lat: destLat, angle: headingDeg });
+
+          const points: TrailPoint[] = [];
+          for (let i = 0; i < TRAIL_POINTS; i++) {
+            const t = (i / (TRAIL_POINTS - 1)) * TRAIL_SPAN;
+            const trailPhase = phase - t;
+            const trailAngle = baseAngle + trailPhase * orbitSpeed;
+            const trailRad = (trailAngle * Math.PI) / 180;
+            points.push({
+              lng: coords.lng + Math.cos(trailRad) * orbitRadius,
+              lat: coords.lat + Math.sin(trailRad) * orbitRadius * 0.6,
+            });
+          }
+          allOrbitTrails.push(points);
+          orbitIdx++;
         }
-        allTrails.push(points);
-      });
+      }
     }
 
-    return { aircraftPositions: positions, trails: allTrails };
-  }, [bases, phase]);
+    return { aircraftPositions: positions, orbitTrails: allOrbitTrails, rebaseTrails: allRebaseTrails };
+  }, [bases, phase, currentHour]);
 
-  // Notify parent of selected aircraft position for camera follow
   useEffect(() => {
     if (!selectedAircraftId || !onPositionUpdate) return;
     const pos = aircraftPositions.find((p) => p.id === selectedAircraftId);
     if (pos) onPositionUpdate(pos.lng, pos.lat);
   }, [aircraftPositions, selectedAircraftId, onPositionUpdate]);
 
-  // Draw trails on canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     const map = mapRef?.getMap();
@@ -129,15 +165,13 @@ export function AircraftLayer({
     ctx.lineCap = "round";
     ctx.lineWidth = 2.5;
 
-    for (const trail of trails) {
+    // Orbit trails — green
+    for (const trail of orbitTrails) {
       const projected = trail.map((p) => map.project([p.lng, p.lat]));
-
-      // Draw segments with fading opacity
       for (let i = 0; i < projected.length - 1; i++) {
-        const frac = i / (projected.length - 1); // 0 = head, 1 = tail
+        const frac = i / (projected.length - 1);
         const opacity = 0.7 * (1 - frac);
         if (opacity < 0.01) break;
-
         ctx.beginPath();
         ctx.moveTo(projected[i].x, projected[i].y);
         ctx.lineTo(projected[i + 1].x, projected[i + 1].y);
@@ -145,7 +179,22 @@ export function AircraftLayer({
         ctx.stroke();
       }
     }
-  }, [trails, mapRef, phase]);
+
+    // Rebase trails — cyan, fading from aircraft (i=N-1, bright) back to tail (i=0, dim)
+    for (const trail of rebaseTrails) {
+      const projected = trail.map((p) => map.project([p.lng, p.lat]));
+      for (let i = 0; i < projected.length - 1; i++) {
+        const frac = i / (projected.length - 1); // 0=tail(dim), 1=head(bright)
+        const opacity = 0.7 * frac;
+        if (opacity < 0.01) continue;
+        ctx.beginPath();
+        ctx.moveTo(projected[i].x, projected[i].y);
+        ctx.lineTo(projected[i + 1].x, projected[i + 1].y);
+        ctx.strokeStyle = `rgba(34, 211, 238, ${opacity})`;
+        ctx.stroke();
+      }
+    }
+  }, [orbitTrails, rebaseTrails, mapRef, phase]);
 
   return (
     <>
@@ -168,8 +217,9 @@ export function AircraftLayer({
             style={{
               cursor: onSelectAircraft ? "pointer" : "default",
               transform: `rotate(${ac.angle}deg)`,
-              filter:
-                "brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(90deg) drop-shadow(0 0 4px #22c55e88)",
+              filter: ac.isRebase
+                ? "brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(160deg) drop-shadow(0 0 5px #22d3ee88)"
+                : "brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(90deg) drop-shadow(0 0 4px #22c55e88)",
             }}
             onClick={(e) => {
               e.stopPropagation();

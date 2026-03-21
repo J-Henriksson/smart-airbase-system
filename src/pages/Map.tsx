@@ -111,6 +111,7 @@ export default function MapPage() {
             <SupplyLinesLayer bases={state.bases} />
             <AircraftLayer
               bases={state.bases}
+              currentHour={state.hour}
               onSelectAircraft={(baseId, aircraftId) =>
                 setSelected({ kind: "aircraft", baseId, aircraftId })
               }
