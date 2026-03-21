@@ -7,6 +7,7 @@ import gripenSilhouette from "@/assets/gripen-silhouette.png";
 const REBASE_TRANSIT_HOURS = 2;
 const TRAIL_POINTS = 80;
 const TRAIL_SPAN = 8;
+const REBASE_VISUAL_PERIOD = 200;
 
 interface AircraftPosition {
   id: string;
@@ -21,6 +22,7 @@ interface TrailPoint {
   lng: number;
   lat: number;
 }
+
 
 export function AircraftLayer({
   bases,
@@ -69,32 +71,30 @@ export function AircraftLayer({
           const destCoords = BASE_COORDS[ac.rebaseTarget];
           if (!destCoords) continue;
 
-          // Progress 0→1 from startHour to missionEndHour
-          const startHour = (ac.missionEndHour ?? 0) - REBASE_TRANSIT_HOURS;
-          const progress = Math.min(1, Math.max(0,
-            ((currentHour ?? 0) - startHour) / REBASE_TRANSIT_HOURS
-          ));
+          // Animate continuously using phase (same as orbit planes)
+          const progress = (phase % REBASE_VISUAL_PERIOD) / REBASE_VISUAL_PERIOD;
 
           const lng = coords.lng + (destCoords.lng - coords.lng) * progress;
           const lat = coords.lat + (destCoords.lat - coords.lat) * progress;
 
-          // Heading: match orbit convention — screen y is inverted vs lat, same 0.6 scale
+          // Flight vector and heading (screen y inverted vs lat, Mercator scale correction)
           const dLng = destCoords.lng - coords.lng;
           const dLat = destCoords.lat - coords.lat;
-          const headingDeg = Math.atan2(-dLat * 0.6, dLng) * (180 / Math.PI);
+          const midLat = (coords.lat + destCoords.lat) / 2;
+          const mercatorScale = 1 / Math.cos(midLat * Math.PI / 180);
+          const headingDeg = Math.atan2(-dLat * mercatorScale, dLng) * (180 / Math.PI);
 
           positions.push({ id: ac.id, baseId: base.id, lng, lat, angle: headingDeg, isRebase: true });
 
-          // Trail: i=0 is the dim tail (farthest behind), i=N-1 is the bright head (at aircraft)
-          // Canvas draws opacity = 0.7*(frac) where frac=i/(N-1), so dim at i=0, bright at i=N-1.
-          const TRAIL_FRACTION = 0.2;
-          const trailTail = Math.max(0, progress - TRAIL_FRACTION);
+          // Trail: identical approach to orbit — step back in phase-time.
+          // i=0 = current position (bright), i increases = past positions (dim).
           const points: TrailPoint[] = [];
           for (let i = 0; i < TRAIL_POINTS; i++) {
-            const t = trailTail + (progress - trailTail) * (i / (TRAIL_POINTS - 1));
+            const t = (i / (TRAIL_POINTS - 1)) * TRAIL_SPAN;
+            const trailProgress = Math.max(0, progress - t / REBASE_VISUAL_PERIOD);
             points.push({
-              lng: coords.lng + (destCoords.lng - coords.lng) * t,
-              lat: coords.lat + (destCoords.lat - coords.lat) * t,
+              lng: coords.lng + (destCoords.lng - coords.lng) * trailProgress,
+              lat: coords.lat + (destCoords.lat - coords.lat) * trailProgress,
             });
           }
           allRebaseTrails.push(points);
@@ -180,13 +180,13 @@ export function AircraftLayer({
       }
     }
 
-    // Rebase trails — cyan, fading from aircraft (i=N-1, bright) back to tail (i=0, dim)
+    // Rebase trails — cyan, same rendering as orbit trails
     for (const trail of rebaseTrails) {
       const projected = trail.map((p) => map.project([p.lng, p.lat]));
       for (let i = 0; i < projected.length - 1; i++) {
-        const frac = i / (projected.length - 1); // 0=tail(dim), 1=head(bright)
-        const opacity = 0.7 * frac;
-        if (opacity < 0.01) continue;
+        const frac = i / (projected.length - 1);
+        const opacity = 0.7 * (1 - frac);
+        if (opacity < 0.01) break;
         ctx.beginPath();
         ctx.moveTo(projected[i].x, projected[i].y);
         ctx.lineTo(projected[i + 1].x, projected[i + 1].y);
