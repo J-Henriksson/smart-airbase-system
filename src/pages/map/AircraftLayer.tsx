@@ -8,7 +8,7 @@ const REBASE_TRANSIT_HOURS = 2;
 const TRAIL_POINTS = 80;
 const TRAIL_SPAN = 8;
 const REBASE_TRAIL_SPAN = 3;
-const REBASE_VISUAL_PERIOD = 200;
+const REBASE_VISUAL_PERIOD = 350;
 
 interface AircraftPosition {
   id: string;
