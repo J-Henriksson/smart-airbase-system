@@ -91,7 +91,8 @@ export function AircraftLayer({
           const points: TrailPoint[] = [];
           for (let i = 0; i < TRAIL_POINTS; i++) {
             const t = (i / (TRAIL_POINTS - 1)) * TRAIL_SPAN;
-            const trailProgress = Math.max(0, progress - t / REBASE_VISUAL_PERIOD);
+            const trailProgress = progress - t / REBASE_VISUAL_PERIOD;
+            if (trailProgress <= 0) break;
             points.push({
               lng: coords.lng + (destCoords.lng - coords.lng) * trailProgress,
               lat: coords.lat + (destCoords.lat - coords.lat) * trailProgress,
