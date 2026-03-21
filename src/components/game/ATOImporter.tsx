@@ -1,9 +1,9 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useImperativeHandle } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGame } from "@/context/GameContext";
 import type { ATOOrder, AircraftType, BaseType, MissionType } from "@/types/game";
 import {
-  Upload, FileText, AlertTriangle, CheckCircle2, X,
+  FileText, AlertTriangle, CheckCircle2, X,
   ChevronRight, Plane, Target, Eye, Shield, Radio, Zap,
 } from "lucide-react";
 
@@ -157,13 +157,16 @@ M002,RECCE,FOB_N,2,8,12,medium,GripenE,SPANING-POD
 M003,DCA,MOB,4,12,18,high,GripenE,IRIS-T + Meteor
 M004,AI_DT,FOB_S,4,8,11,high,GripenE,GBU-39`;
 
-export function ATOImporter({ onImportComplete }: { onImportComplete?: () => void } = {}) {
+export function ATOImporter({ onImportComplete, triggerRef }: { onImportComplete?: () => void; triggerRef?: React.RefObject<{ triggerFileInput: () => void } | null> } = {}) {
   const { state, importATOBatch } = useGame();
   const fileRef     = useRef<HTMLInputElement>(null);
   const [rows,    setRows]    = useState<ParsedRow[] | null>(null);
   const [fileName, setFileName] = useState("");
   const [imported, setImported] = useState(false);
-  const [dragging, setDragging] = useState(false);
+
+  useImperativeHandle(triggerRef, () => ({
+    triggerFileInput: () => fileRef.current?.click(),
+  }));
 
   // Flat aircraft list for digital twin lookup
   const allAircraft = state.bases.flatMap(b =>
@@ -214,48 +217,14 @@ export function ATOImporter({ onImportComplete }: { onImportComplete?: () => voi
 
   return (
     <>
-      {/* ── Drop zone / Upload button ── */}
-      <div
-        onDragOver={e => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        className="rounded-lg border-2 border-dashed transition-all p-2 flex flex-col items-center justify-center gap-1 cursor-pointer"
-        style={{
-          borderColor: dragging ? AMBER : `${NAVY}30`,
-          background:  dragging ? `${AMBER}08` : `${NAVY}04`,
-        }}
-        onClick={() => fileRef.current?.click()}
-      >
-        <Upload className="h-4 w-4" style={{ color: NAVY }} />
-        <div className="text-center">
-          <div className="text-[9px] font-mono font-bold" style={{ color: NAVY }}>
-            LADDA UPP ATO-FIL
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            className="px-2 py-0.5 rounded text-[8px] font-mono font-bold transition-all hover:brightness-110"
-            style={{ background: NAVY, color: SILVER }}
-            onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}
-          >
-            Välj fil
-          </button>
-          <button
-            className="px-2 py-0.5 rounded text-[8px] font-mono font-bold transition-all hover:brightness-110"
-            style={{ background: `${NAVY}14`, color: NAVY, border: `1px solid ${NAVY}30` }}
-            onClick={e => { e.stopPropagation(); handleLoadSample(); }}
-          >
-            Exempel
-          </button>
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,text/csv"
-          className="hidden"
-          onChange={handleInputChange}
-        />
-      </div>
+      {/* Hidden file input triggered by CSV button */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={handleInputChange}
+      />
 
       {/* ── Parse result ── */}
       <AnimatePresence>
@@ -376,21 +345,31 @@ export function ATOImporter({ onImportComplete }: { onImportComplete?: () => voi
                 <div className="text-[9px] font-mono font-bold uppercase tracking-widest" style={{ color: NAVY }}>
                   TIDSLINJE FÖRHANDSVISNING — DAG {state.day}
                 </div>
-                {/* Hour ruler */}
-                <div className="flex text-[7px] font-mono pl-28" style={{ color: "hsl(218 15% 50%)" }}>
-                  {Array.from({ length: 19 }, (_, i) => i + 5).map(h => (
-                    <div key={h} className="flex-1 text-center">{String(h).padStart(2,"0")}</div>
-                  ))}
-                </div>
-                {/* Rows */}
-                <div className="space-y-1">
+                {/* Hour ruler — shared container with rows so labels align */}
+                <div className="flex flex-col gap-1">
+                  {/* Label row — 0 to 24 */}
+                  <div className="flex items-center">
+                    <div className="w-[112px] shrink-0" />
+                    <div className="flex-1 flex text-[7px] font-mono" style={{ color: "hsl(218 15% 50%)" }}>
+                      {Array.from({ length: 25 }, (_, i) => i).map(h => (
+                        <div key={h} className="flex-1 text-center">{String(h).padStart(2,"0")}</div>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Mission rows */}
+                  <div className="space-y-1">
                   {validRows.map((row, i) => {
                     const color = MISSION_COLORS[row.order!.missionType] ?? NAVY;
-                    const startPct = ((row.order!.startHour - 5) / 19) * 100;
-                    const widthPct = ((row.order!.endHour - row.order!.startHour) / 19) * 100;
+                    const timelineStart = 0;
+                    const timelineEnd = 24;
+                    const totalSlots = timelineEnd - timelineStart; // 24
+                    const startOffset = row.order!.startHour - timelineStart;
+                    const duration = row.order!.endHour - row.order!.startHour;
+                    const leftPct = (startOffset / totalSlots) * 100;
+                    const widthPct = (duration / totalSlots) * 100;
                     return (
                       <div key={i} className="flex items-center gap-2">
-                        <div className="w-28 shrink-0 flex items-center gap-1.5">
+                        <div className="w-[112px] shrink-0 flex items-center gap-1.5">
                           <span
                             className="text-[8px] font-mono font-bold truncate"
                             style={{ color }}
@@ -402,13 +381,21 @@ export function ATOImporter({ onImportComplete }: { onImportComplete?: () => voi
                           )}
                         </div>
                         <div className="flex-1 relative h-5 rounded" style={{ background: `${NAVY}0A` }}>
+                          {/* Start marker */}
+                          <div
+                            className="absolute top-0 bottom-0 w-0.5 rounded"
+                            style={{ left: `${leftPct}%`, background: color, opacity: 0.6 }}
+                          />
+                          {/* Mission bar */}
                           <div
                             className="absolute top-0.5 bottom-0.5 rounded flex items-center justify-center text-[7px] font-mono font-bold text-white overflow-hidden"
                             style={{
-                              left:       `${startPct}%`,
-                              width:      `${Math.max(widthPct, 3)}%`,
+                              left: `${leftPct}%`,
+                              width: `${Math.max(widthPct, 4)}%`,
                               background: color,
-                              opacity:    row.risks.length > 0 ? 0.65 : 0.9,
+                              opacity: row.risks.length > 0 ? 0.7 : 1,
+                              border: `2px solid ${color}`,
+                              boxShadow: `0 0 4px ${color}60`,
                             }}
                           >
                             {row.order!.missionType}
@@ -417,6 +404,7 @@ export function ATOImporter({ onImportComplete }: { onImportComplete?: () => voi
                       </div>
                     );
                   })}
+                  </div>
                 </div>
               </div>
             )}

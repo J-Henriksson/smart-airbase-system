@@ -213,7 +213,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome, overdueAircraft
   return (
     <div>
       {/* ── SVG MAP ───────────────────────────────────────────────── */}
-      <div className="relative w-full overflow-x-auto select-none" style={{ background: "#D7DEE1" }}>
+      <div className="relative w-full overflow-x-auto select-none" style={{ background: "#ffffff" }}>
 
         <svg
           ref={svgRef}
@@ -293,7 +293,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome, overdueAircraft
           {/* ── Apron / Parking ── */}
           <rect
             x="60" y="218" width="780" height="90"
-            fill={selected === "apron" ? "#c8d4e8" : "#b8c8de"}
+            fill={selected === "apron" ? "#c8d4e8" : "#ffffff"}
             stroke={selected === "apron" ? "#0C234C" : "#8099bb"}
             strokeWidth={selected === "apron" ? 2 : 0.8}
             rx="4"
@@ -505,7 +505,7 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome, overdueAircraft
 
           {/* ── På Uppdrag Box ── */}
           {(() => {
-            const boxX = 585, boxY = 333, boxW = 255, boxH = 135;
+            const boxX = 585, boxY = 314, boxW = 255, boxH = 135;
             const cols = 4;
             return (
               <g>
@@ -611,21 +611,6 @@ export function BaseMap({ base, onDropAircraft, onUtfallOutcome, overdueAircraft
               </g>
             );
           })()}
-
-          {/* ── Personnel barracks ── */}
-          <g>
-            <rect x="370" y="40" width="110" height="70" rx="3"
-              fill="#0C234C0a" stroke="#0C234C45" strokeWidth="1" />
-            {[0, 1, 2].map((row) =>
-              [0, 1, 2, 3].map((col) => (
-                <rect key={`${row}-${col}`}
-                  x={380 + col * 22} y={50 + row * 16}
-                  width="14" height="9" rx="1"
-                  fill="#D7DEE1" stroke="#0C234C25" strokeWidth="0.5" />
-              ))
-            )}
-            <text x="425" y="120" textAnchor="middle" fontSize="7" fill="#0C234C" opacity="0.7" fontFamily="monospace" fontWeight="bold">FÖRLÄGGNING</text>
-          </g>
 
           {/* NO ROADS — only taxiway strip drawn above */}
 

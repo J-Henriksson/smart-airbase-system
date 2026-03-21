@@ -604,18 +604,58 @@ export function ATOMissionPanel({
                             }`}>
                               {sel && <CheckCircle2 className="h-3 w-3 text-primary-foreground" />}
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="text-xs font-bold font-mono">{ac.tailNumber}</div>
                               <div className="text-[10px] text-muted-foreground">{ac.type}</div>
                             </div>
-                            <div className="ml-auto text-right">
-                              <div className="text-[9px] font-mono text-muted-foreground">{ac.flightHours}h</div>
-                              <div className="text-[9px] font-mono text-status-green">MC</div>
+                            <div className="text-right shrink-0 space-y-1">
+                              <div className="text-[9px] font-mono font-bold" style={{ color: ac.health < 30 ? "hsl(0 72% 51%)" : ac.health < 60 ? "hsl(38 92% 50%)" : "hsl(152 60% 45%)" }}>
+                                {ac.health}%
+                              </div>
+                              <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${ac.health}%`, background: ac.health < 30 ? "hsl(0 72% 51%)" : ac.health < 60 ? "hsl(38 92% 50%)" : "hsl(152 60% 45%)" }} />
+                              </div>
+                              <div className="text-[8px] font-mono text-muted-foreground">
+                                {ac.payload ?? "—"}
+                              </div>
+                              {ac.maintenanceTimeRemaining != null && ac.maintenanceTimeRemaining > 0 && (
+                                <div className="text-[8px] font-mono text-status-yellow">
+                                  UH: {ac.maintenanceTimeRemaining}h
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0 space-y-0.5 border-l pl-2" style={{ borderColor: "hsl(215 14% 84%)" }}>
+                              <div className="text-[8px] font-mono text-muted-foreground">
+                                UH om {ac.hoursToService}h
+                              </div>
+                              <div className="text-[8px] font-mono text-muted-foreground">
+                                {ac.flightHours}h totalt
+                              </div>
                             </div>
                           </div>
                         </button>
                       );
                     })}
+                  </div>
+                )}
+
+                {warnings.length > 0 && (
+                  <div className="space-y-1 max-h-24 overflow-y-auto">
+                    {warnings.map((w) => (
+                      <div
+                        key={w.id}
+                        className={`flex items-start gap-2 text-[10px] font-mono rounded px-2 py-1 ${
+                          w.severity === "error"
+                            ? "bg-status-red/10 text-status-red"
+                            : w.severity === "warning"
+                            ? "bg-status-yellow/10 text-status-yellow"
+                            : "bg-muted/30 text-muted-foreground"
+                        }`}
+                      >
+                        <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                        {w.message}
+                      </div>
+                    ))}
                   </div>
                 )}
 
@@ -666,30 +706,6 @@ export function ATOMissionPanel({
       </div>
 
       {/* ── Validation footer ──────────────────────────────────────────────── */}
-      {warnings.length > 0 && (
-        <div className="border-t border-border shrink-0">
-          <div className="px-4 py-2 space-y-1 max-h-36 overflow-y-auto">
-            <div className="text-[9px] font-mono text-muted-foreground tracking-wider uppercase mb-1">
-              Varningar
-            </div>
-            {warnings.map((w) => (
-              <div
-                key={w.id}
-                className={`flex items-start gap-2 text-[10px] font-mono rounded px-2 py-1 ${
-                  w.severity === "error"
-                    ? "bg-status-red/10 text-status-red"
-                    : w.severity === "warning"
-                    ? "bg-status-yellow/10 text-status-yellow"
-                    : "bg-muted/30 text-muted-foreground"
-                }`}
-              >
-                <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-                {w.message}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

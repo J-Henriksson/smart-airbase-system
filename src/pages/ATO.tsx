@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useGame } from "@/context/GameContext";
 import { TopBar } from "@/components/game/TopBar";
 import { ATOEditor } from "@/components/game/ATOEditor";
@@ -73,6 +73,7 @@ export function ATOBody({ embedded = false }: { embedded?: boolean }) {
   const [editingOrder, setEditingOrder] = useState<ATOOrder | undefined>(undefined);
   const [showImporter, setShowImporter] = useState(false);
   const [newOrderStartHour, setNewOrderStartHour] = useState<number | undefined>(undefined);
+  const importerRef = useRef<{ triggerFileInput: () => void } | null>(null);
 
   const selectedOrder = state.atoOrders.find((o) => o.id === selectedOrderId) ?? null;
   const selectedBase = selectedOrder
@@ -184,7 +185,7 @@ export function ATOBody({ embedded = false }: { embedded?: boolean }) {
             NY ORDER
           </button>
           <button
-            onClick={() => setShowImporter(!showImporter)}
+            onClick={() => { setShowImporter(true); setTimeout(() => importerRef.current?.triggerFileInput(), 50); }}
             className="flex items-center gap-1.5 text-xs font-mono font-bold px-4 py-2 rounded-lg transition-all hover:opacity-90"
             style={{ background: showImporter ? "hsl(220 63% 18%)" : "transparent", color: "hsl(42 64% 62%)", border: "1px solid hsl(42 64% 53% / 0.3)" }}
           >
@@ -194,14 +195,12 @@ export function ATOBody({ embedded = false }: { embedded?: boolean }) {
         </div>
       </div>
 
-      {/* ATO Importer — inline panel */}
-      {showImporter && (
-        <div className="border-b border-border bg-card overflow-y-auto" style={{ maxHeight: "320px" }}>
-          <div className="px-6 py-4">
-            <ATOImporter />
-          </div>
+      {/* ATO Importer — always mounted so ref works; shown when showImporter is true */}
+      <div className="border-b border-border bg-card overflow-y-auto" style={{ maxHeight: "320px", display: showImporter ? "block" : "none" }}>
+        <div className="px-6 py-4">
+          <ATOImporter triggerRef={importerRef} />
         </div>
-      )}
+      </div>
 
       {/* Main content */}
       <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-0">
