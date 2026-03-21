@@ -213,47 +213,40 @@ export function ATOImporter({ onImportComplete }: { onImportComplete?: () => voi
   const riskRows    = rows?.filter(r => r.risks.length > 0) ?? [];
 
   return (
-    <div className="space-y-4">
-
+    <>
       {/* ── Drop zone / Upload button ── */}
       <div
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        className="rounded-xl border-2 border-dashed transition-all p-6 flex flex-col items-center justify-center gap-3 cursor-pointer"
+        className="rounded-lg border-2 border-dashed transition-all p-2 flex flex-col items-center justify-center gap-1 cursor-pointer"
         style={{
           borderColor: dragging ? AMBER : `${NAVY}30`,
           background:  dragging ? `${AMBER}08` : `${NAVY}04`,
         }}
         onClick={() => fileRef.current?.click()}
       >
-        <Upload className="h-7 w-7" style={{ color: NAVY }} />
+        <Upload className="h-4 w-4" style={{ color: NAVY }} />
         <div className="text-center">
-          <div className="text-[11px] font-mono font-bold" style={{ color: NAVY }}>
-            LADDA UPP ATO-FIL (.csv)
-          </div>
-          <div className="text-[9px] font-mono mt-0.5" style={{ color: "hsl(218 15% 50%)" }}>
-            Dra och släpp eller klicka för att välja
+          <div className="text-[9px] font-mono font-bold" style={{ color: NAVY }}>
+            LADDA UPP ATO-FIL
           </div>
         </div>
         <div className="flex gap-2">
           <button
-            className="px-4 py-1.5 rounded text-[10px] font-mono font-bold transition-all hover:brightness-110"
+            className="px-2 py-0.5 rounded text-[8px] font-mono font-bold transition-all hover:brightness-110"
             style={{ background: NAVY, color: SILVER }}
             onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}
           >
             Välj fil
           </button>
           <button
-            className="px-4 py-1.5 rounded text-[10px] font-mono font-bold transition-all hover:brightness-110"
+            className="px-2 py-0.5 rounded text-[8px] font-mono font-bold transition-all hover:brightness-110"
             style={{ background: `${NAVY}14`, color: NAVY, border: `1px solid ${NAVY}30` }}
             onClick={e => { e.stopPropagation(); handleLoadSample(); }}
           >
-            Ladda exempelfil
+            Exempel
           </button>
-        </div>
-        <div className="text-[8px] font-mono text-center" style={{ color: "hsl(218 15% 60%)" }}>
-          Kolumner: MissionID, Type, Base, Count, StartTime, EndTime, Priority [, AircraftType, Payload]
         </div>
         <input
           ref={fileRef}
@@ -465,6 +458,6 @@ export function ATOImporter({ onImportComplete }: { onImportComplete?: () => voi
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }

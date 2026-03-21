@@ -15,7 +15,6 @@ import { RemainingLifeGraf } from "@/components/dashboard/RemainingLifeGraf";
 import { ResursPanel } from "@/components/dashboard/ResursPanel";
 import { ResursPage } from "@/components/dashboard/ResursPage";
 import { ATOBody } from "./ATO";
-import FleetAnalyticsPage from "./FleetAnalyticsPage";
 import AARPage from "./AARPage";
 import { IntelligenceSidebar } from "@/components/dashboard/IntelligenceSidebar";
 import { BaseMap, DropZone } from "@/components/game/BaseMap";
@@ -34,7 +33,7 @@ import {
 } from "lucide-react";
 
 // ─── Section type ─────────────────────────────────────────────────────────────
-type Section = "base" | "missions" | "maintenance" | "resources" | "ato" | "fleet" | "aar";
+type Section = "base" | "missions" | "maintenance" | "resources" | "ato" | "aar";
 
 // ─── Section panel wrapper ────────────────────────────────────────────────────
 function Panel({ title, icon: Icon, children }: {
@@ -168,8 +167,7 @@ const Index = () => {
     { id: "maintenance", label: "Hangar",        Icon: Hammer,       badge: inMaintTotal || undefined, badgeColor: inMaintTotal > 0 ? "#d97706" : "#22a05a" },
     { id: "resources",   label: "Resurser",      Icon: BarChart3,    badge: kritiskaResurser || undefined, badgeColor: "#D9192E" },
     { id: "ato",         label: "ATO Planering", Icon: BookOpen,     badge: pendingATOCount || undefined, badgeColor: "#D7AB3A" },
-    { id: "fleet",       label: "Flottanalys",   Icon: Activity,     badge: undefined },
-    { id: "aar",         label: "AAR Logg",      Icon: ClipboardList, badge: undefined },
+    { id: "aar",         label: "Historik",      Icon: ClipboardList, badge: undefined },
   ];
 
   // ─── Aircraft status styling ───────────────────────────────────────────────
@@ -337,7 +335,7 @@ const Index = () => {
         {activeSection === "ato" ? (
           <ATOBody embedded />
         ) : (
-        <div className="flex-1 overflow-y-auto" style={{ background: ["fleet","aar"].includes(activeSection) ? "#0C234C" : "hsl(0 0% 100%)" }}>
+        <div className="flex-1 overflow-y-auto" style={{ background: ["aar"].includes(activeSection) ? "hsl(0 0% 100%)" : "hsl(0 0% 100%)" }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSection}
@@ -345,7 +343,7 @@ const Index = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.16 }}
-              className={["fleet","aar"].includes(activeSection) ? "" : "p-5 space-y-5"}
+              className={["aar"].includes(activeSection) ? "" : "p-5 space-y-5"}
             >
 
               {/* ──── BASÖVERSIKT ──── */}
@@ -550,11 +548,6 @@ const Index = () => {
             <ResursPage base={selectedBase} phase={state.phase} events={state.events} />
               )}
 
-              {/* ──── FLEET ANALYTICS ──── */}
-              {activeSection === "fleet" && (
-                <FleetAnalyticsPage embedded />
-              )}
-
               {/* ──── AAR LOGG ──── */}
               {activeSection === "aar" && (
                 <AARPage embedded />
@@ -567,7 +560,7 @@ const Index = () => {
         )}
 
         {/* ── RIGHT SIDEBAR — Intelligence Sidebar ── */}
-        {!["ato","fleet","aar","flygplan"].includes(activeSection) && (
+        {!["ato","aar","flygplan"].includes(activeSection) && (
           <IntelligenceSidebar base={selectedBase} phase={state.phase} events={state.events} />
         )}
 

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useGame } from "../context/GameContext";
 import type { AARActionType, RiskLevel } from "../types/game";
 
@@ -50,6 +52,26 @@ const TYPE_FILTER_MAP: Record<string, AARActionType> = {
   "Landning":  "LANDING_RECEIVED",
   "Reservdel": "SPARE_PART_USED",
 };
+
+// ─── Time range helpers ───────────────────────────────────────────────────────
+
+function parseEventDay(timestamp: string): number {
+  const match = timestamp.match(/^Dag (\d+)/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+function isWithinTimeRange(timestamp: string, range: "all" | "today" | "yesterday" | "last7" | "last30" | "custom", custom: { from?: Date; to?: Date }, currentDay: number): boolean {
+  if (range === "all") return true;
+  const eventDay = parseEventDay(timestamp);
+  if (range === "today") return eventDay === currentDay;
+  if (range === "yesterday") return eventDay === currentDay - 1;
+  if (range === "last7") return eventDay >= currentDay - 6 && eventDay <= currentDay;
+  if (range === "last30") return eventDay >= currentDay - 29 && eventDay <= currentDay;
+  if (range === "custom" && custom.from && custom.to) {
+    return eventDay >= custom.from.getDate() && eventDay <= custom.to.getDate();
+  }
+  return true;
+}
 
 // ─── FilterPill ───────────────────────────────────────────────────────────────
 
@@ -231,6 +253,8 @@ export default function AARPage({ embedded = false }: { embedded?: boolean }) {
   const [acFilter,   setAcFilter]   = useState<string>("Alla");
   const [riskFilter, setRiskFilter] = useState<string>("Alla");
   const [typeFilter, setTypeFilter] = useState<string>("Alla");
+  const [timeRange,  setTimeRange]  = useState<"all" | "today" | "yesterday" | "last7" | "last30" | "custom">("today");
+  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
 
   // Unique aircraft IDs
   const uniqueAcIds = Array.from(
@@ -249,18 +273,19 @@ export default function AARPage({ embedded = false }: { embedded?: boolean }) {
     return true;
   }).reverse(); // newest first
 
-  // Summary stats (over ALL events, not filtered)
-  const total         = state.events.length;
-  const missionEvents = state.events.filter((e) => e.actionType === "MISSION_DISPATCH").length;
-  const maintEvents   = state.events.filter((e) =>
+  // Summary stats (filtered by time range)
+  const timeFiltered = state.events.filter((e) => isWithinTimeRange(e.timestamp, timeRange, customRange, state.day));
+  const total         = timeFiltered.length;
+  const missionEvents = timeFiltered.filter((e) => e.actionType === "MISSION_DISPATCH").length;
+  const maintEvents   = timeFiltered.filter((e) =>
     e.actionType === "MAINTENANCE_START" || e.actionType === "HANGAR_CONFIRM"
   ).length;
   const otherEvents   = total - missionEvents - maintEvents;
 
-  const lowCount          = state.events.filter((e) => e.riskLevel === "low").length;
-  const mediumCount       = state.events.filter((e) => e.riskLevel === "medium").length;
-  const highCount         = state.events.filter((e) => e.riskLevel === "high").length;
-  const catastrophicCount = state.events.filter((e) => e.riskLevel === "catastrophic").length;
+  const lowCount          = timeFiltered.filter((e) => e.riskLevel === "low").length;
+  const mediumCount       = timeFiltered.filter((e) => e.riskLevel === "medium").length;
+  const highCount         = timeFiltered.filter((e) => e.riskLevel === "high").length;
+  const catastrophicCount = timeFiltered.filter((e) => e.riskLevel === "catastrophic").length;
 
   const riskScore = (mediumCount + highCount * 2 + catastrophicCount * 4) / Math.max(total, 1);
   const profile =
@@ -274,7 +299,7 @@ export default function AARPage({ embedded = false }: { embedded?: boolean }) {
   const headerTimestamp = `Dag ${state.day} ${String(state.hour).padStart(2, "0")}:00Z`;
 
   return (
-    <div className={embedded ? "font-mono flex flex-col min-h-full" : "min-h-screen font-mono flex flex-col"} style={{ background: DEEP_BLUE, color: SILVER }}>
+    <div className={embedded ? "font-mono flex flex-col h-fit" : "min-h-screen font-mono flex flex-col"} style={{ background: embedded ? "hsl(0 0% 100%)" : DEEP_BLUE, color: embedded ? DEEP_BLUE : SILVER }}>
 
       {/* ── HEADER — only in standalone mode ── */}
       {!embedded && (
@@ -282,10 +307,10 @@ export default function AARPage({ embedded = false }: { embedded?: boolean }) {
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <div>
               <div className="text-[9px] font-mono uppercase tracking-widest mb-1" style={{ color: "rgba(215,222,225,0.4)" }}>
-                Black Box — After Action Review
+                Historik — Händelselog
               </div>
               <h1 className="text-2xl font-black tracking-tight" style={{ color: SILVER }}>
-                AAR — UPPDRAGSANALYS & HISTORIK
+                HISTORIK — UPPDRAGSANALYS
               </h1>
               <div className="text-[11px] font-mono mt-1" style={{ color: "rgba(215,222,225,0.5)" }}>
                 {currentBase?.name ?? "MOB"} · {headerTimestamp}
@@ -303,7 +328,7 @@ export default function AARPage({ embedded = false }: { embedded?: boolean }) {
       )}
 
       {/* ── FILTER BAR ── */}
-      <div className="px-6 py-4 border-b" style={{ borderColor: "rgba(215,222,225,0.08)", background: "rgba(0,0,0,0.15)" }}>
+      <div className="px-6 py-4 border-b" style={{ borderColor: "rgba(215,222,225,0.08)", background: embedded ? "rgba(12,35,76,0.92)" : "rgba(0,0,0,0.15)" }}>
         <div className="max-w-7xl mx-auto space-y-2.5">
           {/* Row 1 — Aircraft filter */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -333,10 +358,10 @@ export default function AARPage({ embedded = false }: { embedded?: boolean }) {
       </div>
 
       {/* ── BODY — 60/40 split ── */}
-      <div className="flex-1 flex gap-0 max-w-7xl mx-auto w-full px-6 py-6 gap-6">
+      <div className="flex max-w-7xl mx-auto w-full px-6 py-6 gap-6">
 
         {/* ── LEFT — Timeline (60%) ── */}
-        <div className="flex-[3] overflow-y-auto space-y-3 pr-2" style={{ maxHeight: "calc(100vh - 280px)" }}>
+        <div className="w-3/5 space-y-3 pr-2 rounded-xl p-4" style={{ alignSelf: "flex-start", background: embedded ? "rgba(12,35,76,0.92)" : undefined }}>
           <AnimatePresence mode="popLayout">
             {filteredEvents.map((event) => (
               <EventCard key={event.id} event={event} />
@@ -355,7 +380,71 @@ export default function AARPage({ embedded = false }: { embedded?: boolean }) {
         </div>
 
         {/* ── RIGHT — Summary (40%) — sticky ── */}
-        <div className="flex-[2] space-y-4" style={{ alignSelf: "flex-start", position: "sticky", top: 16 }}>
+        <div className="w-2/5 space-y-4 rounded-xl p-4" style={{ alignSelf: "flex-start", position: "sticky", top: 16, background: embedded ? "rgba(12,35,76,0.92)" : undefined }}>
+
+          {/* ── TIME RANGE FILTER ── */}
+          <div className="rounded-xl p-4 space-y-3"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(215,222,225,0.1)" }}>
+            <div className="text-[9px] font-mono uppercase tracking-widest font-bold" style={{ color: "rgba(215,222,225,0.45)" }}>
+              TIDSRANGE
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(["all", "today", "yesterday", "last7", "last30"] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => { setTimeRange(r); setCustomRange({}); }}
+                  className="text-[10px] font-mono font-bold px-3 py-1.5 rounded-full border transition-all"
+                  style={{
+                    background: timeRange === r ? AMBER : "rgba(255,255,255,0.05)",
+                    color: timeRange === r ? DEEP_BLUE : SILVER,
+                    borderColor: timeRange === r ? AMBER : "rgba(215,222,225,0.15)",
+                  }}
+                >
+                  {r === "all" ? "Alla" : r === "today" ? "Idag" : r === "yesterday" ? "Igår" : r === "last7" ? "7 dgr" : "30 dgr"}
+                </button>
+              ))}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className="text-[10px] font-mono font-bold px-3 py-1.5 rounded-full border transition-all"
+                    style={{
+                      background: timeRange === "custom" ? AMBER : "rgba(255,255,255,0.05)",
+                      color: timeRange === "custom" ? DEEP_BLUE : SILVER,
+                      borderColor: timeRange === "custom" ? AMBER : "rgba(215,222,225,0.15)",
+                    }}
+                  >
+                    Datum
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto p-0" style={{ background: DEEP_BLUE, border: `1px solid rgba(215,222,225,0.1)` }}>
+                  <Calendar
+                    mode="range"
+                    selected={{ from: customRange.from, to: customRange.to }}
+                    onSelect={(range) => {
+                      setCustomRange({ from: range?.from, to: range?.to });
+                      setTimeRange("custom");
+                    }}
+                    numberOfMonths={1}
+                    disabled={{ before: new Date(0) }}
+                    classNames={{
+                      root: "bg-[#0C234C] text-[#D7DEE1]",
+                      day_selected: "bg-[#D7AB3A] text-[#0C234C] hover:bg-[#D7AB3A] hover:text-[#0C234C] focus:bg-[#D7AB3A] focus:text-[#0C234C]",
+                      day_today: "bg-[#D7AB3A] text-[#0C234C] font-bold",
+                      day: "text-[#D7DEE1]",
+                      head_cell: "text-[#D7AB3A]",
+                      caption: "text-[#D7DEE1]",
+                      nav_button: "text-[#D7DEE1]",
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            {timeRange === "custom" && customRange.from && customRange.to && (
+              <div className="text-[9px] font-mono" style={{ color: "rgba(215,222,225,0.45)" }}>
+                Dag {customRange.from.getDate()} – Dag {customRange.to.getDate()}
+              </div>
+            )}
+          </div>
 
           {/* 1. NYTTJANDEGRAD */}
           <div className="rounded-xl p-5 space-y-4"

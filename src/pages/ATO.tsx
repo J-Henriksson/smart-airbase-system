@@ -22,6 +22,7 @@ import {
   Pencil,
   Trash2,
   Plus,
+  Upload,
 } from "lucide-react";
 import { ATOGanttView } from "@/components/game/ATOGanttView";
 
@@ -46,9 +47,9 @@ const priorityColor = {
 const priorityLabel = { high: "HÖG", medium: "MEDEL", low: "LÅG" };
 
 const statusColor = {
-  pending: "bg-primary/10 border-primary/30 text-primary",
-  assigned: "bg-status-yellow/10 border-status-yellow/30 text-status-yellow",
-  dispatched: "bg-status-green/10 border-status-green/30 text-status-green",
+  pending: "bg-status-yellow/15 border-status-yellow/40 text-status-yellow",
+  assigned: "bg-status-green/15 border-status-green/40 text-status-green",
+  dispatched: "bg-status-green/15 border-status-green/40 text-status-green",
   completed: "bg-muted border-border text-muted-foreground",
 };
 
@@ -70,6 +71,7 @@ export function ATOBody({ embedded = false }: { embedded?: boolean }) {
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "dispatched" | "completed">("all");
   const [showEditor, setShowEditor] = useState(false);
   const [editingOrder, setEditingOrder] = useState<ATOOrder | undefined>(undefined);
+  const [showImporter, setShowImporter] = useState(false);
   const [newOrderStartHour, setNewOrderStartHour] = useState<number | undefined>(undefined);
 
   const selectedOrder = state.atoOrders.find((o) => o.id === selectedOrderId) ?? null;
@@ -181,15 +183,25 @@ export function ATOBody({ embedded = false }: { embedded?: boolean }) {
             <Plus className="h-3.5 w-3.5" />
             NY ORDER
           </button>
+          <button
+            onClick={() => setShowImporter(!showImporter)}
+            className="flex items-center gap-1.5 text-xs font-mono font-bold px-4 py-2 rounded-lg transition-all hover:opacity-90"
+            style={{ background: showImporter ? "hsl(220 63% 18%)" : "transparent", color: "hsl(42 64% 62%)", border: "1px solid hsl(42 64% 53% / 0.3)" }}
+          >
+            <Upload className="h-3.5 w-3.5" />
+            CSV
+          </button>
         </div>
       </div>
 
       {/* ATO Importer — inline panel */}
-      <div className="border-b border-border bg-card overflow-y-auto" style={{ maxHeight: "320px" }}>
-        <div className="px-6 py-4">
-          <ATOImporter />
+      {showImporter && (
+        <div className="border-b border-border bg-card overflow-y-auto" style={{ maxHeight: "320px" }}>
+          <div className="px-6 py-4">
+            <ATOImporter />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main content */}
       <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-0">
@@ -238,7 +250,7 @@ export function ATOBody({ embedded = false }: { embedded?: boolean }) {
                     isSelected
                       ? "border-primary/60 bg-primary/10"
                       : "border-border bg-card hover:border-border hover:bg-muted/30"
-                  }`}
+                  } ${order.status === "pending" ? "border-l-4 border-l-status-yellow" : order.status === "assigned" || order.status === "dispatched" ? "border-l-4 border-l-status-green" : ""}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -270,15 +282,15 @@ export function ATOBody({ embedded = false }: { embedded?: boolean }) {
                       <div className="flex gap-0.5 mt-0.5">
                         <button
                           onClick={(e) => { e.stopPropagation(); setEditingOrder(order); setShowEditor(true); }}
-                          className="p-0.5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                          className="text-[10px] font-mono font-bold px-3 py-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors border border-muted-foreground/20"
                         >
-                          <Pencil className="h-3 w-3" />
+                          Ändra
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); deleteATOOrder(order.id); toast.success("Order raderad"); if (selectedOrderId === order.id) { setSelectedOrderId(null); setSelectedAircraft([]); } }}
-                          className="p-0.5 rounded text-muted-foreground hover:text-status-red hover:bg-status-red/10 transition-colors"
+                          className="text-[10px] font-mono font-bold px-3 py-1.5 rounded-lg text-muted-foreground hover:text-status-red hover:bg-status-red/10 transition-colors border border-muted-foreground/20"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          Ta bort
                         </button>
                       </div>
                     </div>
