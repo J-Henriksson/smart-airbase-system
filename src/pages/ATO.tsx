@@ -188,7 +188,7 @@ export function ATOBody({ embedded = false }: { embedded?: boolean }) {
           <button
             onClick={() => { setShowImporter(true); setTimeout(() => importerRef.current?.triggerFileInput(), 50); }}
             className="flex items-center gap-1.5 text-xs font-mono font-bold px-4 py-2 rounded-lg transition-all hover:opacity-90"
-            style={{ background: showImporter ? "hsl(220 63% 18%)" : "transparent", color: "hsl(42 64% 62%)", border: "1px solid hsl(42 64% 53% / 0.3)" }}
+            style={{ background: "hsl(220 63% 18%)", color: "hsl(42 64% 62%)", border: "1px solid hsl(42 64% 53% / 0.3)" }}
           >
             <Upload className="h-3.5 w-3.5" />
             CSV

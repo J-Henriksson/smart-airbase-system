@@ -163,6 +163,7 @@ export function ATOImporter({ onImportComplete, triggerRef }: { onImportComplete
   const [rows,    setRows]    = useState<ParsedRow[] | null>(null);
   const [fileName, setFileName] = useState("");
   const [imported, setImported] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   useImperativeHandle(triggerRef, () => ({
     triggerFileInput: () => fileRef.current?.click(),
@@ -225,6 +226,35 @@ export function ATOImporter({ onImportComplete, triggerRef }: { onImportComplete
         className="hidden"
         onChange={handleInputChange}
       />
+
+      {/* ── Empty state drop zone ── */}
+      {!rows && (
+        <div
+          onDrop={handleDrop}
+          onDragOver={e => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 py-8 px-4 text-center transition-all"
+          style={{
+            borderColor: dragging ? AMBER : `${NAVY}30`,
+            background: dragging ? `${AMBER}08` : `${NAVY}04`,
+          }}
+        >
+          <FileText className="h-7 w-7 opacity-40" style={{ color: NAVY }} />
+          <p className="text-[10px] font-mono" style={{ color: "hsl(218 15% 50%)" }}>
+            Dra och släpp en CSV-fil här, eller klicka på <strong>CSV</strong>-knappen ovan
+          </p>
+          <p className="text-[8px] font-mono opacity-60" style={{ color: NAVY }}>
+            Kolumner: MissionID, Type, Base, Count, StartTime, EndTime, Priority [, AircraftType] [, Payload]
+          </p>
+          <button
+            onClick={handleLoadSample}
+            className="text-[9px] font-mono px-3 py-1.5 rounded-lg transition-all hover:brightness-110"
+            style={{ background: `${NAVY}12`, color: NAVY, border: `1px solid ${NAVY}25` }}
+          >
+            Ladda exempeldata
+          </button>
+        </div>
+      )}
 
       {/* ── Parse result ── */}
       <AnimatePresence>
