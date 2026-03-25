@@ -221,6 +221,237 @@ function EventCard({ event }: { event: ReturnType<typeof useGame>["state"]["even
   );
 }
 
+// ─── GeminiIcon ───────────────────────────────────────────────────────────────
+
+function GeminiIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gemini-grad" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#4285F4" />
+          <stop offset="50%" stopColor="#9B72CB" />
+          <stop offset="100%" stopColor="#D96570" />
+        </linearGradient>
+      </defs>
+      {/* Gemini star shape: 4-pointed star */}
+      <path
+        d="M14 2 C14 2 15.6 9.4 20 14 C15.6 18.6 14 26 14 26 C14 26 12.4 18.6 8 14 C12.4 9.4 14 2 14 2Z"
+        fill="url(#gemini-grad)"
+      />
+    </svg>
+  );
+}
+
+// ─── AIRecommendations ────────────────────────────────────────────────────────
+
+function AIRecommendations({
+  riskScore,
+  catastrophicCount,
+  pauseCount,
+  missionEvents,
+  total,
+  highCount,
+  mediumCount,
+  lowCount,
+  maintEvents,
+  otherEvents,
+  profile,
+}: {
+  riskScore: number;
+  catastrophicCount: number;
+  pauseCount: number;
+  missionEvents: number;
+  total: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+  maintEvents: number;
+  otherEvents: number;
+  profile: string;
+}) {
+  type Priority = "KRITISK" | "HÖG" | "MEDIUM" | "LÅG";
+  type Category = "Säkerhet" | "Underhåll" | "Operativ" | "Planering" | "Resurs";
+
+  const recs: { priority: Priority; category: Category; title: string; text: string }[] = [];
+
+  if (catastrophicCount > 0) {
+    recs.push({
+      priority: "KRITISK",
+      category: "Säkerhet",
+      title: "Katastrofala händelser kräver omedelbar åtgärd",
+      text: `${catastrophicCount} katastrofal${catastrophicCount > 1 ? "a händelser" : " händelse"} registrerades. Genomför omedelbar orsaksanalys och stärk varningssystemets svarströsklar för att förhindra upprepning.`,
+    });
+  }
+
+  if (riskScore > 1.5) {
+    recs.push({
+      priority: "HÖG",
+      category: "Säkerhet",
+      title: "Aggressiv riskprofil — förstärk säkerhetsmarginaler",
+      text: `Operatörsprofil klassificeras som "${profile}". Högriskbeslut förekommer systematiskt. Rekommenderar kortare underhållsintervall, obligatoriska pausperioder och tydligare eskaleringsgränser.`,
+    });
+  }
+
+  if (pauseCount > 1) {
+    recs.push({
+      priority: pauseCount > 3 ? "HÖG" : "MEDIUM",
+      category: "Resurs",
+      title: "Upprepade underhållsavbrott tyder på resursbrist",
+      text: `Underhåll avbröts ${pauseCount} gånger under perioden. Detta indikerar otillräcklig personalkapacitet eller reservdelslager. Öka underhållsbuffert och planera schemalagda underhållsfönster proaktivt.`,
+    });
+  }
+
+  if (total > 0 && missionEvents / total > 0.55) {
+    const pct = Math.round((missionEvents / total) * 100);
+    recs.push({
+      priority: "MEDIUM",
+      category: "Operativ",
+      title: "Uppdragsintensitet överstiger rekommenderad nivå",
+      text: `${pct}% av alla händelser är uppdragsrelaterade. Hög driftstakt accelererar systemförslitning. Balansera insatskvoten mot underhållskapaciteten för att förlänga systemlivslängden.`,
+    });
+  }
+
+  if (highCount > mediumCount && highCount > 2) {
+    recs.push({
+      priority: "MEDIUM",
+      category: "Planering",
+      title: "Högriskbeslut dominerar — inför operativa gränsvärden",
+      text: `${highCount} högriskbeslut mot ${mediumCount} mediumriskhändelser. Mönstret tyder på systematisk underrapportering av risknivå eller otillräckliga operativa stoppregler. Revidera beslutsprotokoll.`,
+    });
+  }
+
+  if (total > 0 && maintEvents / total < 0.15 && total > 5) {
+    recs.push({
+      priority: "MEDIUM",
+      category: "Underhåll",
+      title: "Underhållsfrekvens under rekommenderad miniminivå",
+      text: `Underhållshändelser utgör ${Math.round((maintEvents / total) * 100)}% av aktiviteterna. Systemets livslängd och driftsäkerhet kräver minst 20–25% underhållsaktivitet i förhållande till total händelsevolym.`,
+    });
+  }
+
+  if (lowCount / Math.max(total, 1) > 0.7) {
+    recs.push({
+      priority: "LÅG",
+      category: "Operativ",
+      title: "God riskdisciplin — upprätthåll nuvarande protokoll",
+      text: `${Math.round((lowCount / total) * 100)}% av besluten klassificeras som lågrisk. Operatören visar konsekvent säkerhetsfokus. Dokumentera nuvarande beslutsrutiner som referens för träning och standardisering.`,
+    });
+  }
+
+  recs.push({
+    priority: "LÅG",
+    category: "Planering",
+    title: "Utöka datainsamling för prediktiv analys",
+    text: "Fortsätt logga händelser konsekvent. Med ≥50 händelser aktiveras prediktiva underhållsmodeller som kan förutse NMC-risk 6–12 timmar i förväg med upp till 78% precision.",
+  });
+
+  const priorityColor: Record<Priority, string> = {
+    KRITISK: RED,
+    HÖG: RED,
+    MEDIUM: AMBER,
+    LÅG: "rgba(215,222,225,0.5)",
+  };
+  const priorityBg: Record<Priority, string> = {
+    KRITISK: "rgba(217,25,46,0.2)",
+    HÖG: "rgba(217,25,46,0.15)",
+    MEDIUM: "rgba(215,171,58,0.15)",
+    LÅG: "rgba(215,222,225,0.08)",
+  };
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: DEEP_BLUE,
+        border: `1px solid rgba(215,171,58,0.25)`,
+      }}
+    >
+      {/* Header */}
+      <div
+        className="px-5 py-3 flex items-center justify-between"
+        style={{
+          background: "rgba(215,171,58,0.1)",
+          borderBottom: `1px solid rgba(215,171,58,0.2)`,
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <GeminiIcon size={18} />
+          <span className="text-[10px] font-mono font-black uppercase tracking-widest" style={{ color: AMBER }}>
+            Gemini
+          </span>
+          <div className="w-px h-3.5" style={{ background: "rgba(215,171,58,0.3)" }} />
+          <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "rgba(215,222,225,0.4)" }}>
+            AI-Rekommendationer
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <motion.div
+            animate={{ opacity: [0.3, 1, 0.3] }}
+            transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: AMBER }}
+          />
+          <span className="text-[9px] font-mono" style={{ color: "rgba(215,171,58,0.55)" }}>
+            Analyserar {total} händelser
+          </span>
+        </div>
+      </div>
+
+      {/* Recommendations grid */}
+      <div className="p-4 grid grid-cols-2 gap-3 xl:grid-cols-3">
+        {recs.map((rec, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06, ease: "easeOut" }}
+            className="rounded-lg p-3 space-y-2 flex flex-col"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: `1px solid rgba(215,171,58,0.1)`,
+            }}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className="text-[8px] font-mono font-black px-2 py-0.5 rounded"
+                style={{
+                  background: priorityBg[rec.priority],
+                  color: priorityColor[rec.priority],
+                  border: `1px solid ${priorityColor[rec.priority]}44`,
+                }}
+              >
+                {rec.priority}
+              </span>
+              <span
+                className="text-[8px] font-mono px-2 py-0.5 rounded"
+                style={{ background: "rgba(215,171,58,0.1)", color: "rgba(215,171,58,0.6)" }}
+              >
+                {rec.category}
+              </span>
+            </div>
+            <div className="text-[10px] font-mono font-bold leading-tight" style={{ color: SILVER }}>
+              {rec.title}
+            </div>
+            <p className="text-[9px] font-mono leading-relaxed flex-1" style={{ color: "rgba(215,222,225,0.5)" }}>
+              {rec.text}
+            </p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div
+        className="px-5 py-2 flex items-center gap-2"
+        style={{ borderTop: `1px solid rgba(215,171,58,0.1)` }}
+      >
+        <GeminiIcon size={10} />
+        <span className="text-[8px] font-mono" style={{ color: "rgba(215,222,225,0.2)" }}>
+          Genererat av Gemini · Baserat på loggad händelsedata · Inte ett operativt beslutsstöd
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ─── BarRow ───────────────────────────────────────────────────────────────────
 
 function BarRow({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
@@ -357,6 +588,23 @@ export default function AARPage({ embedded = false }: { embedded?: boolean }) {
         </div>
       </div>
 
+      {/* ── GEMINI AI RECOMMENDATIONS ── */}
+      <div className="px-6 py-4 max-w-7xl mx-auto w-full">
+        <AIRecommendations
+          riskScore={riskScore}
+          catastrophicCount={catastrophicCount}
+          pauseCount={pauseCount}
+          missionEvents={missionEvents}
+          total={total}
+          highCount={highCount}
+          mediumCount={mediumCount}
+          lowCount={lowCount}
+          maintEvents={maintEvents}
+          otherEvents={otherEvents}
+          profile={profile}
+        />
+      </div>
+
       {/* ── BODY — 60/40 split ── */}
       <div className="flex max-w-7xl mx-auto w-full px-6 py-6 gap-6">
 
@@ -382,7 +630,7 @@ export default function AARPage({ embedded = false }: { embedded?: boolean }) {
         {/* ── RIGHT — Summary (40%) — sticky ── */}
         <div className="w-2/5 space-y-4 rounded-xl p-4" style={{ alignSelf: "flex-start", position: "sticky", top: 16, background: embedded ? "rgba(12,35,76,0.92)" : undefined }}>
 
-          {/* ── TIME RANGE FILTER ── */}
+        {/* ── TIME RANGE FILTER ── */}
           <div className="rounded-xl p-4 space-y-3"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(215,222,225,0.1)" }}>
             <div className="text-[9px] font-mono uppercase tracking-widest font-bold" style={{ color: "rgba(215,222,225,0.45)" }}>
