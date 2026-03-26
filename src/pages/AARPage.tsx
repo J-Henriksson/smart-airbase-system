@@ -346,31 +346,31 @@ function AIRecommendations({
   });
 
   const priorityColor: Record<Priority, string> = {
-    KRITISK: RED,
-    HÖG: RED,
-    MEDIUM: AMBER,
-    LÅG: "rgba(215,222,225,0.5)",
+    KRITISK: "#FF2E47",
+    HÖG: "#FF5C47",
+    MEDIUM: "#FFCA2D",
+    LÅG: "rgba(140,195,255,0.9)",
   };
   const priorityBg: Record<Priority, string> = {
-    KRITISK: "rgba(217,25,46,0.2)",
-    HÖG: "rgba(217,25,46,0.15)",
-    MEDIUM: "rgba(215,171,58,0.15)",
-    LÅG: "rgba(215,222,225,0.08)",
+    KRITISK: "rgba(255,46,71,0.28)",
+    HÖG: "rgba(255,92,71,0.22)",
+    MEDIUM: "rgba(255,202,45,0.22)",
+    LÅG: "rgba(100,170,255,0.15)",
   };
   return (
     <div
       className="rounded-xl overflow-hidden"
       style={{
         background: DEEP_BLUE,
-        border: `1px solid rgba(215,171,58,0.25)`,
+        border: `1px solid rgba(215,171,58,0.5)`,
       }}
     >
       {/* Header */}
       <div
         className="px-5 py-3 flex items-center justify-between"
         style={{
-          background: "rgba(215,171,58,0.1)",
-          borderBottom: `1px solid rgba(215,171,58,0.2)`,
+          background: "rgba(215,171,58,0.18)",
+          borderBottom: `1px solid rgba(215,171,58,0.4)`,
         }}
       >
         <div className="flex items-center gap-3">
@@ -379,7 +379,7 @@ function AIRecommendations({
             Gemini
           </span>
           <div className="w-px h-3.5" style={{ background: "rgba(215,171,58,0.3)" }} />
-          <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "rgba(215,222,225,0.4)" }}>
+          <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "rgba(215,222,225,0.75)" }}>
             AI-Rekommendationer
           </span>
         </div>
@@ -390,7 +390,7 @@ function AIRecommendations({
             className="w-1.5 h-1.5 rounded-full"
             style={{ background: AMBER }}
           />
-          <span className="text-[9px] font-mono" style={{ color: "rgba(215,171,58,0.55)" }}>
+          <span className="text-[9px] font-mono" style={{ color: "rgba(215,171,58,0.9)" }}>
             Analyserar {total} händelser
           </span>
         </div>
@@ -406,8 +406,8 @@ function AIRecommendations({
             transition={{ delay: i * 0.06, ease: "easeOut" }}
             className="rounded-lg p-3 space-y-2 flex flex-col"
             style={{
-              background: "rgba(255,255,255,0.04)",
-              border: `1px solid rgba(215,171,58,0.1)`,
+              background: "rgba(255,255,255,0.07)",
+              border: `1px solid rgba(215,171,58,0.28)`,
             }}
           >
             <div className="flex items-center justify-between gap-2">
@@ -423,7 +423,7 @@ function AIRecommendations({
               </span>
               <span
                 className="text-[8px] font-mono px-2 py-0.5 rounded"
-                style={{ background: "rgba(215,171,58,0.1)", color: "rgba(215,171,58,0.6)" }}
+                style={{ background: "rgba(215,171,58,0.2)", color: "rgba(215,171,58,0.95)" }}
               >
                 {rec.category}
               </span>
@@ -431,7 +431,7 @@ function AIRecommendations({
             <div className="text-[10px] font-mono font-bold leading-tight" style={{ color: SILVER }}>
               {rec.title}
             </div>
-            <p className="text-[9px] font-mono leading-relaxed flex-1" style={{ color: "rgba(215,222,225,0.5)" }}>
+            <p className="text-[9px] font-mono leading-relaxed flex-1" style={{ color: "rgba(215,222,225,0.78)" }}>
               {rec.text}
             </p>
           </motion.div>
@@ -441,10 +441,10 @@ function AIRecommendations({
       {/* Footer */}
       <div
         className="px-5 py-2 flex items-center gap-2"
-        style={{ borderTop: `1px solid rgba(215,171,58,0.1)` }}
+        style={{ borderTop: `1px solid rgba(215,171,58,0.25)` }}
       >
         <GeminiIcon size={10} />
-        <span className="text-[8px] font-mono" style={{ color: "rgba(215,222,225,0.2)" }}>
+        <span className="text-[8px] font-mono" style={{ color: "rgba(215,222,225,0.5)" }}>
           Genererat av Gemini · Baserat på loggad händelsedata · Inte ett operativt beslutsstöd
         </span>
       </div>
