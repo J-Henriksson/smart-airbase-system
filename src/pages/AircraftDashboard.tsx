@@ -496,7 +496,7 @@ function PilotModal({ ac, onClose }: { ac: Aircraft; onClose: () => void }) {
     <div>
       <ModalHeader title={`${p.name} — "${p.callsign}"`} subtitle="Pilotprofil" onClose={onClose} />
       <div className="px-6 py-5 space-y-6">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="rounded-xl p-4 space-y-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(215,222,225,0.1)" }}>
             <div className="flex items-center gap-2 mb-3"><User className="h-4 w-4 text-[#D7DEE1]/40" /><span className="text-[9px] uppercase tracking-widest text-[#D7DEE1]/40">Identitet</span></div>
             <MRow label="Grad" value={p.rank} />
@@ -517,7 +517,7 @@ function PilotModal({ ac, onClose }: { ac: Aircraft; onClose: () => void }) {
 
         <div className="rounded-xl p-4" style={{ background: "rgba(217,25,46,0.06)", border: "1px solid rgba(217,25,46,0.2)" }}>
           <div className="flex items-center gap-2 mb-3"><TrendingUp className="h-4 w-4" style={{ color: "#D9192E" }} /><span className="text-[9px] uppercase tracking-widest text-[#D7DEE1]/40">G-belastningsprofil</span></div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {[
               { label: "Max G (senaste pass)", value: `${(5.5 + (ac.flightHours % 30) * 0.1).toFixed(1)} g` },
               { label: "Snitt senaste 5 pass",  value: "3.7 g" },
@@ -591,7 +591,7 @@ function CrewModal({ ac, onClose }: { ac: Aircraft; onClose: () => void }) {
     <div>
       <ModalHeader title={c.name} subtitle="Crew Chief — Teknikerprofil" onClose={onClose} />
       <div className="px-6 py-5 space-y-6">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="rounded-xl p-4 space-y-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(215,222,225,0.1)" }}>
             <div className="flex items-center gap-2 mb-3"><User className="h-4 w-4 text-[#D7DEE1]/40" /><span className="text-[9px] uppercase tracking-widest text-[#D7DEE1]/40">Identitet</span></div>
             <MRow label="ID" value={c.id} />
@@ -694,7 +694,7 @@ function MissionsModal({ ac, onClose }: { ac: Aircraft; onClose: () => void }) {
       <ModalHeader title={`${total} Uppdrag — ${ac.tailNumber}`} subtitle="Uppdragshistorik & Statistik" onClose={onClose} />
       <div className="px-6 py-5 space-y-6">
 
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: "Totala uppdrag",     value: String(total),                           color: "#D7DEE1" },
             { label: "Flygtimmar (plan)",  value: `${ac.flightHours} h`,                  color: "hsl(42 64% 53%)" },
@@ -919,7 +919,7 @@ export default function AircraftDashboard({ embedded = false, aircraftTailNumber
           </div>
 
           {/* ── QUICK STATS STRIP ── */}
-          <div className="grid grid-cols-4 gap-4 mt-5 pt-4 border-t" style={{ borderColor: "rgba(215,222,225,0.08)" }}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-4 border-t" style={{ borderColor: "rgba(215,222,225,0.08)" }}>
             {[
               { label: "Flygtimmar totalt",  value: `${ac.flightHours} h`,              color: "#D7DEE1" },
               { label: "Till nästa service", value: `${ac.hoursToService.toFixed(1)} h`, color: ac.hoursToService < 20 ? "#D9192E" : "hsl(152 60% 38%)" },
@@ -1249,7 +1249,7 @@ export default function AircraftDashboard({ embedded = false, aircraftTailNumber
                     </div>
 
                     {/* Station grid */}
-                    <div className="grid grid-cols-7 gap-3">
+                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
                       {WEAPONS_STATIONS.map((st) => {
                         const c = stationColor(st.type);
                         return (
@@ -1274,7 +1274,7 @@ export default function AircraftDashboard({ embedded = false, aircraftTailNumber
                     </div>
 
                     {/* Legend */}
-                    <div className="flex items-center gap-6 pt-4 border-t" style={{ borderColor: "rgba(215,222,225,0.08)" }}>
+                    <div className="flex items-center flex-wrap gap-x-6 gap-y-2 pt-4 border-t" style={{ borderColor: "rgba(215,222,225,0.08)" }}>
                       <span className="text-[9px] font-mono uppercase tracking-widest text-[#D7DEE1]/25">Legenda:</span>
                       {[
                         { type: "missile", label: "Missilsystem (skarp)" },

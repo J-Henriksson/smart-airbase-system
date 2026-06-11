@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGame } from "@/context/GameContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { TopBar } from "@/components/game/TopBar";
 import { MaintenanceBays } from "@/components/game/MaintenanceBays";
 import { TurnPhaseTracker } from "@/components/game/TurnPhaseTracker";
@@ -29,7 +31,7 @@ import { BaseType } from "@/types/game";
 import {
   ShieldCheck, Crosshair, Hammer, Siren, Clock,
   MapPin, PlaneTakeoff, ChevronRight, BarChart3, BookOpen,
-  Activity, AlertOctagon, Plane, Wrench, ClipboardList,
+  Activity, AlertOctagon, Plane, Wrench, ClipboardList, Menu,
 } from "lucide-react";
 
 // ─── Section type ─────────────────────────────────────────────────────────────
@@ -64,9 +66,11 @@ const Index = () => {
     hangarDropConfirm, pauseMaintenance, markFaultNMC, consumeSparePart,
   } = useGame();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [selectedBaseId, setSelectedBaseId]           = useState<BaseType>("MOB");
   const [activeSection, setActiveSection]             = useState<Section>("base");
+  const [navOpen, setNavOpen]                         = useState(false);
   const [pendingRunwayCheck, setPendingRunwayCheck]   = useState<string | null>(null);
   const [pendingMaintenanceCheck, setPendingMaintenanceCheck] = useState<string | null>(null);
   const [redRunwayWarning, setRedRunwayWarning]       = useState<string | null>(null);
@@ -189,13 +193,97 @@ const Index = () => {
 
   // ───────────────────────────────────────────────────────────────────────────
 
+  // Shared nav body — rendered in the desktop sidebar and the mobile drawer.
+  const navContent = (
+    <>
+      {/* Nav items */}
+      <div className="py-1.5">
+        {navItems.map(({ id, label, Icon, badge, badgeColor }) => {
+          const isActive = activeSection === id;
+          return (
+            <button key={id}
+              onClick={() => { setActiveSection(id); setNavOpen(false); }}
+              className="relative w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all border-l-2"
+              style={{
+                borderLeftColor: isActive ? "#D9192E" : "transparent",
+                background: isActive ? "hsl(220 63% 18% / 0.06)" : "transparent",
+                color: isActive ? "hsl(220 63% 18%)" : "hsl(218 15% 50%)",
+              }}
+            >
+              <Icon className="h-4 w-4 flex-shrink-0" />
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wide flex-1">{label}</span>
+              {badge != null && badge > 0 && (
+                <span className="h-4 min-w-[1rem] px-1 rounded-full text-[8px] font-black flex items-center justify-center"
+                  style={{ background: badgeColor ?? "#D9192E", color: "white" }}>
+                  {badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Fleet list ── */}
+      <div className="flex-1 overflow-y-auto border-t" style={{ borderColor: "hsl(215 14% 88%)" }}>
+        <div className="px-3 pt-2.5 pb-1">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[8px] font-mono uppercase tracking-widest"
+              style={{ color: "hsl(218 15% 55%)" }}>Flygplan</span>
+            <span className="text-[8px] font-mono" style={{ color: "hsl(218 15% 55%)" }}>
+              → DASHBOARD
+            </span>
+          </div>
+          <div className="space-y-0.5">
+            {selectedBase.aircraft.map((ac) => {
+              const col = acColor(ac.status);
+              const lbl = acLabel(ac.status);
+              return (
+                <motion.button
+                  key={ac.id}
+                  whileHover={{ x: 2, transition: { duration: 0.1 } }}
+                  onClick={() => { setNavOpen(false); navigate(`/aircraft/${ac.tailNumber}`); }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors hover:bg-black/5"
+                  style={{ border: `1px solid ${col}28` }}
+                >
+                  <span className="text-[10px] font-mono font-black" style={{ color: "hsl(220 63% 18%)" }}>
+                    {ac.tailNumber}
+                  </span>
+                  <span className="text-[8px] font-mono font-bold px-1 py-0.5 rounded"
+                    style={{ background: `${col}1A`, color: col }}>
+                    {lbl}
+                  </span>
+                  {(ac.health ?? 100) < 50 && (
+                    <span className="text-[8px] font-mono font-bold" style={{ color: col }}>
+                      {ac.health}%
+                    </span>
+                  )}
+                  <ChevronRight className="h-2.5 w-2.5 ml-auto flex-shrink-0 opacity-20" />
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex flex-col h-screen font-mono" style={{ background: "hsl(0 0% 100%)" }}>
       <TopBar state={state} onAdvanceTurn={advanceTurn} onReset={resetGame} />
 
       {/* ── COMMAND STRIP ── */}
-      <div className="flex items-center gap-3 px-5 py-2 flex-shrink-0 border-b"
+      <div className="flex items-center gap-3 px-3 sm:px-5 py-2 flex-shrink-0 border-b overflow-x-auto"
         style={{ background: "#0C234C", borderColor: "rgba(215,222,225,0.1)" }}>
+
+        {/* Mobile nav toggle */}
+        <button
+          onClick={() => setNavOpen(true)}
+          className="lg:hidden flex-shrink-0 p-1.5 rounded-md border"
+          style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(215,222,225,0.15)", color: "#D7DEE1" }}
+          aria-label="Öppna meny"
+        >
+          <Menu className="h-4 w-4" />
+        </button>
 
         {/* Time / turn */}
         <div className="flex items-center gap-1.5 text-[10px] font-mono pr-3 border-r"
@@ -257,79 +345,19 @@ const Index = () => {
       {/* ── BODY ── */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* ── LEFT SIDEBAR NAV ── */}
-        <nav className="w-52 flex-shrink-0 flex flex-col border-r"
+        {/* ── LEFT SIDEBAR NAV (desktop) ── */}
+        <nav className="hidden lg:flex w-52 flex-shrink-0 flex-col border-r"
           style={{ background: "hsl(0 0% 100%)", borderColor: "hsl(215 14% 86%)" }}>
-
-          {/* Nav items */}
-          <div className="py-1.5">
-            {navItems.map(({ id, label, Icon, badge, badgeColor }) => {
-              const isActive = activeSection === id;
-              return (
-                <button key={id}
-                  onClick={() => setActiveSection(id)}
-                  className="relative w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all border-l-2"
-                  style={{
-                    borderLeftColor: isActive ? "#D9192E" : "transparent",
-                    background: isActive ? "hsl(220 63% 18% / 0.06)" : "transparent",
-                    color: isActive ? "hsl(220 63% 18%)" : "hsl(218 15% 50%)",
-                  }}
-                >
-                  <Icon className="h-4 w-4 flex-shrink-0" />
-                  <span className="text-[11px] font-mono font-bold uppercase tracking-wide flex-1">{label}</span>
-                  {badge != null && badge > 0 && (
-                    <span className="h-4 min-w-[1rem] px-1 rounded-full text-[8px] font-black flex items-center justify-center"
-                      style={{ background: badgeColor ?? "#D9192E", color: "white" }}>
-                      {badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* ── Fleet list ── */}
-          <div className="flex-1 overflow-y-auto border-t" style={{ borderColor: "hsl(215 14% 88%)" }}>
-            <div className="px-3 pt-2.5 pb-1">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[8px] font-mono uppercase tracking-widest"
-                  style={{ color: "hsl(218 15% 55%)" }}>Flygplan</span>
-                <span className="text-[8px] font-mono" style={{ color: "hsl(218 15% 55%)" }}>
-                  → DASHBOARD
-                </span>
-              </div>
-              <div className="space-y-0.5">
-                {selectedBase.aircraft.map((ac) => {
-                  const col = acColor(ac.status);
-                  const lbl = acLabel(ac.status);
-                  return (
-                    <motion.button
-                      key={ac.id}
-                      whileHover={{ x: 2, transition: { duration: 0.1 } }}
-                      onClick={() => navigate(`/aircraft/${ac.tailNumber}`)}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors hover:bg-black/5"
-                      style={{ border: `1px solid ${col}28` }}
-                    >
-                      <span className="text-[10px] font-mono font-black" style={{ color: "hsl(220 63% 18%)" }}>
-                        {ac.tailNumber}
-                      </span>
-                      <span className="text-[8px] font-mono font-bold px-1 py-0.5 rounded"
-                        style={{ background: `${col}1A`, color: col }}>
-                        {lbl}
-                      </span>
-                      {(ac.health ?? 100) < 50 && (
-                        <span className="text-[8px] font-mono font-bold" style={{ color: col }}>
-                          {ac.health}%
-                        </span>
-                      )}
-                      <ChevronRight className="h-2.5 w-2.5 ml-auto flex-shrink-0 opacity-20" />
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          {navContent}
         </nav>
+
+        {/* ── LEFT NAV DRAWER (mobile) ── */}
+        <Sheet open={navOpen} onOpenChange={setNavOpen}>
+          <SheetContent side="left" className="w-64 p-0 flex flex-col font-mono"
+            style={{ background: "hsl(0 0% 100%)" }}>
+            {navContent}
+          </SheetContent>
+        </Sheet>
 
         {/* ── MAIN CONTENT ── */}
         {activeSection === "ato" ? (
@@ -395,7 +423,7 @@ const Index = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 divide-x" style={{ borderColor: "rgba(215,222,225,0.07)", divideColor: "rgba(215,222,225,0.07)" }}>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x" style={{ borderColor: "rgba(215,222,225,0.07)", divideColor: "rgba(215,222,225,0.07)" }}>
 
                       {/* Col 1 — Readiness donut */}
                       <div className="min-w-0 overflow-hidden flex items-center gap-5 px-6 py-5">
@@ -559,8 +587,8 @@ const Index = () => {
         </div>
         )}
 
-        {/* ── RIGHT SIDEBAR — Intelligence Sidebar ── */}
-        {!["flygplan"].includes(activeSection) && (
+        {/* ── RIGHT SIDEBAR — Intelligence Sidebar (desktop only) ── */}
+        {!isMobile && !["flygplan"].includes(activeSection) && (
           <IntelligenceSidebar base={selectedBase} phase={state.phase} events={state.events} />
         )}
 
@@ -601,7 +629,7 @@ const Index = () => {
         if (!ac) return null;
         return (
           <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.75)" }}>
-            <div className="w-[420px] rounded-2xl overflow-hidden shadow-2xl" style={{ background: "#1a0505", border: "2px solid #D9192E" }}>
+            <div className="w-full max-w-[420px] mx-4 rounded-2xl overflow-hidden shadow-2xl" style={{ background: "#1a0505", border: "2px solid #D9192E" }}>
               <div className="px-6 py-4 flex items-center gap-3" style={{ background: "#0d0202", borderBottom: "1px solid #D9192E44" }}>
                 <span className="text-2xl">🚨</span>
                 <div>

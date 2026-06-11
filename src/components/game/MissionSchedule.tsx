@@ -59,7 +59,8 @@ export function MissionSchedule({ atoOrders, day, hour, timelineStart = 0, timel
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="p-4 overflow-x-auto">
+        <div className="min-w-[520px]">
         {/* Timeline header */}
         <div className="flex mb-1">
           <div className="w-32 shrink-0" />
@@ -158,6 +159,7 @@ export function MissionSchedule({ atoOrders, day, hour, timelineStart = 0, timel
               );
             })
           )}
+        </div>
         </div>
       </div>
     </div>

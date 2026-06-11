@@ -336,7 +336,7 @@ export function ATOMissionPanel({
         {/* DETALJER */}
         {activeTab === "details" && (
           <div className="p-4 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>UPPDRAGSTYP</label>
                 <select
@@ -371,7 +371,7 @@ export function ATOMissionPanel({
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className={labelCls}>START (timme)</label>
                 <input
@@ -401,7 +401,7 @@ export function ATOMissionPanel({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>FLYGPLANSTYP</label>
                 <select

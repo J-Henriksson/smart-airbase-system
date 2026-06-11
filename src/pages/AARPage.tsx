@@ -606,10 +606,10 @@ export default function AARPage({ embedded = false }: { embedded?: boolean }) {
       </div>
 
       {/* ── BODY — 60/40 split ── */}
-      <div className="flex max-w-7xl mx-auto w-full px-6 py-6 gap-6">
+      <div className="flex flex-col lg:flex-row max-w-7xl mx-auto w-full px-3 sm:px-6 py-6 gap-6">
 
         {/* ── LEFT — Timeline (60%) ── */}
-        <div className="w-3/5 space-y-3 pr-2 rounded-xl p-4" style={{ alignSelf: "flex-start", background: embedded ? "rgba(12,35,76,0.92)" : undefined }}>
+        <div className="w-full lg:w-3/5 space-y-3 lg:pr-2 rounded-xl p-4" style={{ alignSelf: "flex-start", background: embedded ? "rgba(12,35,76,0.92)" : undefined }}>
           <AnimatePresence mode="popLayout">
             {filteredEvents.map((event) => (
               <EventCard key={event.id} event={event} />
@@ -628,7 +628,7 @@ export default function AARPage({ embedded = false }: { embedded?: boolean }) {
         </div>
 
         {/* ── RIGHT — Summary (40%) — sticky ── */}
-        <div className="w-2/5 space-y-4 rounded-xl p-4" style={{ alignSelf: "flex-start", position: "sticky", top: 16, background: embedded ? "rgba(12,35,76,0.92)" : undefined }}>
+        <div className="w-full lg:w-2/5 space-y-4 rounded-xl p-4 self-start lg:sticky lg:top-4" style={{ background: embedded ? "rgba(12,35,76,0.92)" : undefined }}>
 
         {/* ── TIME RANGE FILTER ── */}
           <div className="rounded-xl p-4 space-y-3"

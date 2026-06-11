@@ -205,9 +205,9 @@ export function MaintenanceBays({ base, onDropAircraft }: MaintenanceBaysProps) 
       </div>
 
       {/* ── Body: grid + optional detail panel ── */}
-      <div className="flex" style={{ minHeight: panelOpen ? 420 : undefined }}>
+      <div className="flex flex-col lg:flex-row" style={{ minHeight: panelOpen ? 420 : undefined }}>
         {/* Bay grid */}
-        <div className={`p-4 grid grid-cols-2 gap-3 transition-all duration-300 ${panelOpen ? "w-[55%]" : "w-full"}`}>
+        <div className={`p-4 grid grid-cols-2 gap-3 transition-all duration-300 ${panelOpen ? "w-full lg:w-[55%]" : "w-full"}`}>
           {bays.map((bay, bayIndex) => {
             const isSelected  = bay.id === selectedBayId;
             const isDragOver  = dragOverId === bay.id;

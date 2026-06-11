@@ -110,7 +110,7 @@ export function ATOEditor({ order, defaultStartHour, availableAircraft, onSave, 
 
         {/* Form */}
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-mono font-bold block mb-1" style={{ color: "hsl(218 15% 45%)" }}>UPPDRAGSTYP</label>
               <select
@@ -146,7 +146,7 @@ export function ATOEditor({ order, defaultStartHour, availableAircraft, onSave, 
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="text-[10px] font-mono font-bold block mb-1" style={{ color: "hsl(218 15% 45%)" }}>START</label>
               <input
@@ -185,7 +185,7 @@ export function ATOEditor({ order, defaultStartHour, availableAircraft, onSave, 
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-mono font-bold block mb-1" style={{ color: "hsl(218 15% 45%)" }}>FLYGPLANSTYP</label>
               <select
@@ -244,7 +244,7 @@ export function ATOEditor({ order, defaultStartHour, availableAircraft, onSave, 
             DESTINATION / PLANERING
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-mono font-bold block mb-1" style={{ color: "hsl(218 15% 45%)" }}>MÅLOMRÅDE</label>
               <input
@@ -269,7 +269,7 @@ export function ATOEditor({ order, defaultStartHour, availableAircraft, onSave, 
 
           {destinationName && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-mono font-bold block mb-1" style={{ color: "hsl(218 15% 45%)" }}>LATITUDE</label>
                   <input

@@ -89,7 +89,7 @@ export function LandingReceptionModal({ aircraft, baseId, onComplete, remaining 
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.85, opacity: 0 }}
           transition={{ type: "spring", stiffness: 280, damping: 22 }}
-          className="w-[480px] rounded-2xl overflow-hidden shadow-2xl"
+          className="w-[calc(100%-2rem)] max-w-[480px] rounded-2xl overflow-hidden shadow-2xl"
           style={{ background: "#0C234C", border: "2px solid #D7AB3A" }}
         >
           {/* Header */}

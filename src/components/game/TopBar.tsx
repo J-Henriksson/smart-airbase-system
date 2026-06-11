@@ -18,7 +18,7 @@ export function TopBar({ state, onAdvanceTurn, onReset }: TopBarProps) {
 
   return (
     <header
-      className="flex items-center justify-between gap-4 px-5 py-0"
+      className="flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-5 py-0"
       style={{
         background: "var(--gradient-navy)",
         borderBottom: "2px solid hsl(42 64% 53% / 0.6)",
@@ -38,7 +38,7 @@ export function TopBar({ state, onAdvanceTurn, onReset }: TopBarProps) {
               style={{ filter: "brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(3deg) brightness(1.1)" }}
             />
           </div>
-          <div className="flex flex-col leading-none">
+          <div className="hidden sm:flex flex-col leading-none">
             <span className="text-[13px] font-black font-sans tracking-widest"
               style={{ color: "hsl(42 64% 62%)", letterSpacing: "0.18em" }}>
               ROAD2AIR
@@ -51,7 +51,7 @@ export function TopBar({ state, onAdvanceTurn, onReset }: TopBarProps) {
         </NavLink>
 
         {/* Nav */}
-        <nav className="flex items-center gap-0.5 ml-2">
+        <nav className="flex items-center gap-0.5 ml-1 sm:ml-2">
           {[
             { to: "/", icon: <LayoutDashboard className="h-3.5 w-3.5" />, label: "DASHBOARD" },
             { to: "/map", icon: <Map className="h-3.5 w-3.5" />, label: "KARTA" },
@@ -73,14 +73,14 @@ export function TopBar({ state, onAdvanceTurn, onReset }: TopBarProps) {
               }
             >
               {icon}
-              {label}
+              <span className="hidden sm:inline">{label}</span>
             </NavLink>
           ))}
         </nav>
       </div>
 
       {/* Center stats */}
-      <div className="flex items-center gap-6">
+      <div className="hidden lg:flex items-center gap-6">
         <div className="flex items-center gap-2 text-sm">
           <Clock className="h-3.5 w-3.5" style={{ color: "hsl(42 64% 53%)" }} />
           <span className="font-mono font-semibold" style={{ color: "hsl(200 12% 86%)" }}>

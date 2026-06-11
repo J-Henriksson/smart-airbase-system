@@ -82,15 +82,15 @@ export default function MapPage() {
       <TopBar state={state} onAdvanceTurn={advanceTurn} onReset={resetGame} />
 
       {/* Sub-header */}
-      <div className="border-b border-border bg-card px-6 py-2.5 flex items-center gap-3">
-        <MapPin className="h-4 w-4 text-primary" />
-        <h2 className="font-sans font-bold text-sm text-foreground tracking-wider">
+      <div className="border-b border-border bg-card px-3 sm:px-6 py-2.5 flex items-center gap-2 sm:gap-3 flex-wrap">
+        <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
+        <h2 className="font-sans font-bold text-xs sm:text-sm text-foreground tracking-wider">
           TAKTISK KARTA — FLYGBASGRUPP
         </h2>
-        <span className="text-[10px] font-mono text-muted-foreground ml-2">
+        <span className="text-[10px] font-mono text-muted-foreground sm:ml-2">
           Dag {state.day} · Fas: {state.phase}
         </span>
-        <div className="ml-auto flex items-center gap-4 text-[10px] font-mono text-muted-foreground">
+        <div className="ml-auto hidden lg:flex items-center gap-4 text-[10px] font-mono text-muted-foreground">
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-status-green inline-block" /> Hög beredskap</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-status-yellow inline-block" /> Medel beredskap</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-status-red inline-block" /> Låg beredskap</span>
@@ -99,10 +99,10 @@ export default function MapPage() {
       </div>
 
       {/* Map + panel */}
-      <div className="flex-1 overflow-hidden flex">
+      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
 
         {/* Map area */}
-        <div className="flex-1 relative overflow-hidden">
+        <div className="flex-1 relative overflow-hidden min-h-0">
           <MapGL
             ref={mapRef}
             initialViewState={{
@@ -166,7 +166,7 @@ export default function MapPage() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 340, opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="w-[340px] flex-shrink-0 border-l border-border bg-card overflow-y-auto flex flex-col"
+              className="w-full lg:w-[340px] lg:flex-shrink-0 max-h-[45vh] lg:max-h-none border-t lg:border-t-0 lg:border-l border-border bg-card overflow-y-auto flex flex-col"
             >
               {/* Panel header */}
               <div className="px-4 py-3 border-b border-border flex items-center justify-between">

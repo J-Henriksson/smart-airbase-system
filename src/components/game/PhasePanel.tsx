@@ -153,7 +153,7 @@ function OutcomeReport({ state }: { state: GameState }) {
   const inMaint = state.bases.reduce((s, b) => s + b.aircraft.filter((a) => isInMaintenance(a.status)).length, 0);
 
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
       {[
         { label: "MC", value: mc, color: "hsl(152 60% 32%)" },
         { label: "På uppdrag", value: onMission, color: "hsl(220 63% 38%)" },

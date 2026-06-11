@@ -15,7 +15,7 @@ export function LastBayWarningModal({ aircraft, totalBays, onContinue, onReturnT
         initial={{ scale: 0.88, opacity: 0, y: 12 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 24 }}
-        className="w-[460px] rounded-2xl overflow-hidden shadow-2xl"
+        className="w-[calc(100%-2rem)] max-w-[460px] rounded-2xl overflow-hidden shadow-2xl"
         style={{ background: "#0C234C", border: "2px solid #D7AB3A" }}
       >
         {/* Header */}
