@@ -4,9 +4,9 @@
 plattform, arkitektur och verktyg.
 
 ## Filer
-- `ROAD2AIR_teknisk_losning.pptx` — **presentationen att skicka.**
-- `generate_deck.py` — genererar `.pptx` (redigerbara textrutor).
-- `assets/gripen_gold.png` — Gripen-silhuetten omfärgad till Saab-guld (autogenereras).
+- `ROAD2AIR_teknisk_losning.pptx`: **presentationen att skicka.**
+- `generate_deck.py`: genererar `.pptx` (redigerbara textrutor).
+- `assets/gripen_gold.png`: Gripen-silhuetten omfärgad till Saab-guld (autogenereras).
 
 ## Regenerera
 ```sh
